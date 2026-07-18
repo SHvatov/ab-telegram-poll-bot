@@ -10,13 +10,13 @@
     <properties>
         <revision>1.0.0</revision>
 
+        <java.vesion>25</java.vesion>
         <maven.compiler.release>25</maven.compiler.release>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <telegrambots.version>10.0.0</telegrambots.version>
         <jackson.version>2.22.1</jackson.version>
-
-        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
     </properties>
 
     <dependencies>
