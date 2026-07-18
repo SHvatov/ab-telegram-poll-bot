@@ -1,4 +1,4 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.ui;
 
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeDefinition;
@@ -7,6 +7,8 @@ import academy.backend.pollbot.i18n.Localization;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.VoteRepository;
+import academy.backend.pollbot.telegram.api.TelegramGateway;
+import academy.backend.pollbot.telegram.routing.CallbackProtocol;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
@@ -17,7 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /** The read-only global ratings list, and looking at one meme's photo with its global rating. */
-final class RatingFlow {
+public final class RatingFlow {
 
     private final TelegramGateway gateway;
     private final Localization localization;
@@ -25,8 +27,8 @@ final class RatingFlow {
     private final VoteRepository voteRepository;
     private final ChatViewRepository chatViewRepository;
 
-    RatingFlow(TelegramGateway gateway, Localization localization, MemeManager memeManager,
-               VoteRepository voteRepository, ChatViewRepository chatViewRepository) {
+    public RatingFlow(TelegramGateway gateway, Localization localization, MemeManager memeManager,
+                       VoteRepository voteRepository, ChatViewRepository chatViewRepository) {
         this.gateway = gateway;
         this.localization = localization;
         this.memeManager = memeManager;
@@ -34,7 +36,7 @@ final class RatingFlow {
         this.chatViewRepository = chatViewRepository;
     }
 
-    void showList(long chatId, String username) {
+    public void showList(long chatId, String username) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         ScreenContent content = buildListContent();
         int messageId = gateway.renderText(chatId, previous, content.text(), content.keyboard());
@@ -42,12 +44,12 @@ final class RatingFlow {
     }
 
     /** Invoked by the background scheduler to refresh an already-open list in place. */
-    void refreshList(CurrentChatState state) {
+    public void refreshList(CurrentChatState state) {
         ScreenContent content = buildListContent();
         gateway.renderText(state.chatId(), state, content.text(), content.keyboard());
     }
 
-    void openMeme(long chatId, String username, String memeCode) {
+    public void openMeme(long chatId, String username, String memeCode) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         Optional<MemeDefinition> memeOpt = memeManager.findByCode(memeCode);
         if (memeOpt.isEmpty()) {

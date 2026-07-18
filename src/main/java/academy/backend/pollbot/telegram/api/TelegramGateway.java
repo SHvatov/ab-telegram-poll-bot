@@ -1,21 +1,25 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.api;
 
 import academy.backend.pollbot.redis.CurrentChatState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.Locale;
 
@@ -64,11 +68,7 @@ public final class TelegramGateway {
                 .caption(caption)
                 .replyMarkup(keyboard)
                 .build();
-        try {
-            telegramClient.execute(method);
-        } catch (TelegramApiException e) {
-            throw new BotOperationException("Failed to edit caption of message " + messageId + " in chat " + chatId, e);
-        }
+        executeSafely(method, chatId, "edit caption of message " + messageId);
     }
 
     public void answerCallbackQuery(String callbackQueryId, String alertText) {
@@ -89,11 +89,7 @@ public final class TelegramGateway {
                 .text(text)
                 .replyMarkup(keyboard)
                 .build();
-        try {
-            return telegramClient.execute(method).getMessageId();
-        } catch (TelegramApiException e) {
-            throw new BotOperationException("Failed to send message to chat " + chatId, e);
-        }
+        return executeSafely(method, chatId, "send message").getMessageId();
     }
 
     private void editText(long chatId, int messageId, String text, InlineKeyboardMarkup keyboard) {
@@ -117,6 +113,8 @@ public final class TelegramGateway {
         if (in == null) {
             throw new IllegalStateException("Meme image not found on classpath: " + resourcePath);
         }
+        // The stream must stay open for the whole upload, so execute() has to happen inside this
+        // try-with-resources rather than after it.
         try (in) {
             String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
             SendPhoto method = SendPhoto.builder()
@@ -125,9 +123,13 @@ public final class TelegramGateway {
                     .caption(caption)
                     .replyMarkup(keyboard)
                     .build();
-            return telegramClient.execute(method).getMessageId();
-        } catch (TelegramApiException e) {
-            throw new BotOperationException("Failed to send photo to chat " + chatId, e);
+            Message sent;
+            try {
+                sent = telegramClient.execute(method);
+            } catch (TelegramApiException e) {
+                throw new BotOperationException("Failed to send photo to chat " + chatId, e);
+            }
+            return sent.getMessageId();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -141,8 +143,36 @@ public final class TelegramGateway {
         }
     }
 
+    /**
+     * Execute-around: every {@link BotApiMethod} call needs the same "wrap failures into
+     * {@link BotOperationException}" handling, so the try/catch lives here once. Note this can't
+     * cover {@link SendPhoto} - its multipart upload puts it under {@code PartialBotApiMethod}
+     * rather than {@code BotApiMethod} in the library's type hierarchy, so {@link #sendPhoto}
+     * handles its own call.
+     */
+    private <T extends Serializable, M extends BotApiMethod<T>> T executeSafely(M method, long chatId, String actionText) {
+        try {
+            return telegramClient.execute(method);
+        } catch (TelegramApiException e) {
+            throw new BotOperationException("Failed to " + actionText + " for chat " + chatId, e);
+        }
+    }
+
+    /**
+     * Telegram's Bot API doesn't expose a distinct error code for "message is not modified" -
+     * every 4xx validation failure shares {@code error_code: 400}, and the description text is
+     * the only way to tell them apart. This checks the structured fields Telegram does give us
+     * ({@code error_code} and {@code description}) rather than pattern-matching the fully
+     * assembled {@link TelegramApiException#getMessage()} string.
+     */
     private static boolean isNotModified(TelegramApiException e) {
-        String message = e.getMessage();
-        return message != null && message.toLowerCase(Locale.ROOT).contains("message is not modified");
+        if (!(e instanceof TelegramApiRequestException requestException)) {
+            return false;
+        }
+        if (!Integer.valueOf(400).equals(requestException.getErrorCode())) {
+            return false;
+        }
+        String description = requestException.getApiResponse();
+        return description != null && description.toLowerCase(Locale.ROOT).contains("message is not modified");
     }
 }

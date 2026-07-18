@@ -1,4 +1,4 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.routing;
 
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeManager;
@@ -7,6 +7,10 @@ import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.UserRepository;
 import academy.backend.pollbot.repository.VoteRepository;
+import academy.backend.pollbot.telegram.api.TelegramGateway;
+import academy.backend.pollbot.telegram.ui.MenuFlow;
+import academy.backend.pollbot.telegram.ui.RatingFlow;
+import academy.backend.pollbot.telegram.ui.VoteFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;

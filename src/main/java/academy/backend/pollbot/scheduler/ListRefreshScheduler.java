@@ -1,9 +1,9 @@
 package academy.backend.pollbot.scheduler;
 
+import academy.backend.pollbot.core.concurrency.ChatSequencer;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
-import academy.backend.pollbot.telegram.BotService;
-import academy.backend.pollbot.telegram.ChatSequencer;
+import academy.backend.pollbot.telegram.routing.BotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

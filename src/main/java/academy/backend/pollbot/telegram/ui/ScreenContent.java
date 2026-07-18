@@ -1,4 +1,4 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.ui;
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 

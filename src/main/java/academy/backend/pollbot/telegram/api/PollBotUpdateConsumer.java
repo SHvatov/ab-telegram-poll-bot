@@ -1,5 +1,7 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.api;
 
+import academy.backend.pollbot.core.concurrency.ChatSequencer;
+import academy.backend.pollbot.telegram.routing.BotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;

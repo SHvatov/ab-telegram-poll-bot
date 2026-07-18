@@ -1,9 +1,11 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.ui;
 
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.i18n.Localization;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
+import academy.backend.pollbot.telegram.api.TelegramGateway;
+import academy.backend.pollbot.telegram.routing.CallbackProtocol;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
@@ -11,24 +13,24 @@ import java.util.List;
 import java.util.Map;
 
 /** The main menu, and the stub screen for the not-yet-implemented tier-list commands. */
-final class MenuFlow {
+public final class MenuFlow {
 
     private final TelegramGateway gateway;
     private final Localization localization;
     private final ChatViewRepository chatViewRepository;
 
-    MenuFlow(TelegramGateway gateway, Localization localization, ChatViewRepository chatViewRepository) {
+    public MenuFlow(TelegramGateway gateway, Localization localization, ChatViewRepository chatViewRepository) {
         this.gateway = gateway;
         this.localization = localization;
         this.chatViewRepository = chatViewRepository;
     }
 
-    void showMainMenu(long chatId, String username) {
+    public void showMainMenu(long chatId, String username) {
         render(chatId, username, localization.get("menu.title"));
     }
 
     /** Used on {@code /start}: the greeting and the main menu are a single message. */
-    void showMainMenuWithGreeting(long chatId, String username) {
+    public void showMainMenuWithGreeting(long chatId, String username) {
         String text = localization.get("welcome.greeting", Map.of("username", username))
                 + "\n\n" + localization.get("menu.title");
         render(chatId, username, text);
@@ -41,7 +43,7 @@ final class MenuFlow {
     }
 
     /** Rendered as a {@link ChatState#MENU} screen too - it's just text with a back button. */
-    void showNotImplemented(long chatId, String username) {
+    public void showNotImplemented(long chatId, String username) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(
                 localization.get("menu.button.back"), CallbackProtocol.MENU);

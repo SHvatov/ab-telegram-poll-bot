@@ -1,4 +1,4 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.api;
 
 public class BotOperationException extends RuntimeException {
 

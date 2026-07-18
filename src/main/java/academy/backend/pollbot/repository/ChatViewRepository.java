@@ -3,22 +3,25 @@ package academy.backend.pollbot.repository;
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.redis.CurrentChatState;
 import redis.clients.jedis.UnifiedJedis;
-import redis.clients.jedis.params.ScanParams;
-import redis.clients.jedis.resps.ScanResult;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Tracks which screen (and Telegram message) is currently shown in each chat, so that
  * navigation knows whether to edit the existing message or send a new one, and so the
  * background scheduler knows which open lists to refresh (and for whom).
+ * <p>
+ * Chats in a {@link ChatState#isRefreshable()} state are also indexed in a dedicated set, so the
+ * scheduler can read exactly the chats it needs in O(1) instead of scanning every {@code chatview:*}
+ * key in the keyspace on every tick.
  */
 public final class ChatViewRepository {
 
-    private static final String SCAN_PATTERN = "chatview:*";
+    private static final String REFRESHABLE_SET_KEY = "chatview:refreshable";
 
     /** How long an untouched chat-view pointer survives before the scheduler stops refreshing it. */
     private static final long VIEW_TTL_SECONDS = 60 * 60; // 1 hour
@@ -36,6 +39,13 @@ public final class ChatViewRepository {
                 "messageId", String.valueOf(messageId),
                 "username", username));
         redis.expire(key, VIEW_TTL_SECONDS);
+
+        String chatIdStr = String.valueOf(chatId);
+        if (state.isRefreshable()) {
+            redis.sadd(REFRESHABLE_SET_KEY, chatIdStr);
+        } else {
+            redis.srem(REFRESHABLE_SET_KEY, chatIdStr);
+        }
     }
 
     public Optional<CurrentChatState> getState(long chatId) {
@@ -46,25 +56,21 @@ public final class ChatViewRepository {
         return Optional.of(toState(chatId, fields));
     }
 
-    /** All chats currently showing a live-refreshable screen, found via SCAN. */
+    /** All chats currently showing a live-refreshable screen. */
     public List<CurrentChatState> listRefreshableStates() {
-        List<CurrentChatState> result = new ArrayList<>();
-        ScanParams params = new ScanParams().match(SCAN_PATTERN).count(200);
-        String cursor = ScanParams.SCAN_POINTER_START;
-        do {
-            ScanResult<String> scanResult = redis.scan(cursor, params);
-            cursor = scanResult.getCursor();
-            for (String key : scanResult.getResult()) {
-                Map<String, String> fields = redis.hgetAll(key);
-                if (fields.isEmpty()) {
-                    continue;
-                }
-                CurrentChatState state = toState(chatIdFromKey(key), fields);
-                if (state.state().isRefreshable()) {
-                    result.add(state);
-                }
+        Set<String> chatIds = redis.smembers(REFRESHABLE_SET_KEY);
+        List<CurrentChatState> result = new ArrayList<>(chatIds.size());
+        for (String chatIdStr : chatIds) {
+            long chatId = Long.parseLong(chatIdStr);
+            Map<String, String> fields = redis.hgetAll(chatViewKey(chatId));
+            if (fields.isEmpty()) {
+                // The chat-view hash TTL'd out without a matching setState() call; drop the
+                // now-stale membership instead of retrying it forever.
+                redis.srem(REFRESHABLE_SET_KEY, chatIdStr);
+                continue;
             }
-        } while (!ScanParams.SCAN_POINTER_START.equals(cursor));
+            result.add(toState(chatId, fields));
+        }
         return result;
     }
 
@@ -78,9 +84,5 @@ public final class ChatViewRepository {
 
     private static String chatViewKey(long chatId) {
         return "chatview:" + chatId;
-    }
-
-    private static long chatIdFromKey(String key) {
-        return Long.parseLong(key.substring("chatview:".length()));
     }
 }

@@ -1,4 +1,4 @@
-package academy.backend.pollbot.telegram;
+package academy.backend.pollbot.telegram.routing;
 
 import academy.backend.pollbot.domain.Rating;
 
