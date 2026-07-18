@@ -1,0 +1,12 @@
+# Bot token is intentionally NOT stored here - it is read from the
+# TELEGRAM_BOT_TOKEN environment variable at startup.
+redis:
+  host: localhost
+  port: 6379
+
+scheduler:
+  refresh-interval-seconds: 60
+
+data:
+  # TTL for user registrations / votes stored in Redis.
+  ttl-days: 7

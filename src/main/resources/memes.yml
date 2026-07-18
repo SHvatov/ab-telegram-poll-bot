@@ -1,0 +1,25 @@
+# Meme catalog for the tier-list poll bot.
+#
+# NOTE: `code` ends up embedded in Telegram callback_data (e.g. "vote:rate:<code>:Z"),
+# which is capped at 64 bytes by the Bot API - keep codes short.
+memes:
+  - position: 1
+    code: "mem_pro_kotika"
+    name: "Мем про котика"
+    path: "memes/mem_pro_kotika.jpg"
+    description: "Это очень смешной мем про котика, который должен понравится всем!"
+    available-after: 2026-07-18T00:00:00.00+03:00
+
+  - position: 2
+    code: "mem_pro_sobaku"
+    name: "Мем про собаку"
+    path: "memes/mem_pro_sobaku.jpg"
+    description: "Пёс увидел пылесос и осознал всю бренность бытия."
+    available-after: 2026-07-18T00:00:00.00+03:00
+
+  - position: 3
+    code: "mem_pro_ponedelnik"
+    name: "Мем про понедельник"
+    path: "memes/mem_pro_ponedelnik.jpg"
+    description: "Когда будильник прозвенел, а ты всё ещё не готов к новой неделе."
+    available-after: 2026-12-31T00:00:00.00+03:00

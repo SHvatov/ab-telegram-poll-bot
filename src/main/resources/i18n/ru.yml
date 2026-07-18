@@ -1,0 +1,50 @@
+# Localized user-facing strings, loaded once at startup.
+# Placeholders use the {name} syntax and are substituted at render time.
+
+welcome:
+  greeting: "Привет, {username}! Добро пожаловать в бот для голосования и составления тир-листа мемов!"
+
+menu:
+  title: "Главное меню"
+  button:
+    vote: "Проголосовать за мем"
+    rating: "Рейтинг мемов"
+    my-tier-list: "Сгенерировать мой тиер-лист"
+    global-tier-list: "Сгенерировать глобальный тиер-лист"
+    back: "◀️ Главное меню"
+  not-implemented: "Не реализовано, ждите обновлений, приходите в следующем году!"
+
+vote:
+  list:
+    title: "Выберите мем, чтобы оценить его:"
+    empty: "Пока нет доступных мемов для голосования."
+    item:
+      unvoted: "Мемчик №{position}: {description}. Глобальный рейтинг: {globalRating}."
+      voted: "Мемчик №{position}: {description}. Ваша оценка: {rating}. Глобальный рейтинг: {globalRating}."
+  detail:
+    caption: "{description}"
+    already-voted: "{description}\n\nВы уже оценили этот мем: {rating}"
+  rate:
+    button:
+      z: "Очень смешно! Это теперь мой самый любимый мем!"
+      a: "Смешно, сохраню себе на память!"
+      b: "Смешно!"
+      c: "Могло бы быть смешнее..."
+      f: "Вообще не смешно :("
+      back: "Верните меня обратно..."
+  saved-alert: "Спасибо, ваша оценка сохранена!"
+  already-voted-alert: "Вы уже голосовали за этот мем!"
+  unavailable-alert: "Этот мем пока недоступен для голосования."
+
+rating:
+  list:
+    title: "Глобальный рейтинг мемов:"
+    empty: "Пока нет доступных мемов."
+    item: "Мемчик №{position}: {description}. Глобальный рейтинг: {globalRating}."
+  detail:
+    caption: "{description}\n\nГлобальный рейтинг: {globalRating}"
+  none: "нет оценок"
+
+error:
+  generic: "Что-то пошло не так, попробуйте ещё раз."
+  meme-not-found: "Мем не найден."
