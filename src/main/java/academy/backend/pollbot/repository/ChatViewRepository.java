@@ -1,8 +1,7 @@
 package academy.backend.pollbot.repository;
 
-import academy.backend.pollbot.domain.ChatViewType;
-import academy.backend.pollbot.redis.ChatViewState;
-import academy.backend.pollbot.redis.RedisKeys;
+import academy.backend.pollbot.domain.ChatState;
+import academy.backend.pollbot.redis.CurrentChatState;
 import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
@@ -13,11 +12,16 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Tracks which view (and Telegram message) is currently shown in each chat, so that
+ * Tracks which screen (and Telegram message) is currently shown in each chat, so that
  * navigation knows whether to edit the existing message or send a new one, and so the
- * background scheduler knows which open list messages to refresh (and for whom).
+ * background scheduler knows which open lists to refresh (and for whom).
  */
 public final class ChatViewRepository {
+
+    private static final String SCAN_PATTERN = "chatview:*";
+
+    /** How long an untouched chat-view pointer survives before the scheduler stops refreshing it. */
+    private static final long VIEW_TTL_SECONDS = 60 * 60; // 1 hour
 
     private final UnifiedJedis redis;
 
@@ -25,27 +29,27 @@ public final class ChatViewRepository {
         this.redis = redis;
     }
 
-    public void setView(long chatId, ChatViewType type, int messageId, String username) {
-        String key = RedisKeys.chatView(chatId);
+    public void setState(long chatId, ChatState state, int messageId, String username) {
+        String key = chatViewKey(chatId);
         redis.hset(key, Map.of(
-                "type", type.name(),
+                "state", state.name(),
                 "messageId", String.valueOf(messageId),
                 "username", username));
-        redis.expire(key, RedisKeys.CHAT_VIEW_TTL_SECONDS);
+        redis.expire(key, VIEW_TTL_SECONDS);
     }
 
-    public Optional<ChatViewState> getView(long chatId) {
-        Map<String, String> fields = redis.hgetAll(RedisKeys.chatView(chatId));
+    public Optional<CurrentChatState> getState(long chatId) {
+        Map<String, String> fields = redis.hgetAll(chatViewKey(chatId));
         if (fields.isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(toState(chatId, fields));
     }
 
-    /** All chats currently showing a live-refreshable list (vote or rating), found via SCAN. */
-    public List<ChatViewState> listRefreshableViews() {
-        List<ChatViewState> result = new ArrayList<>();
-        ScanParams params = new ScanParams().match(RedisKeys.CHAT_VIEW_SCAN_PATTERN).count(200);
+    /** All chats currently showing a live-refreshable screen, found via SCAN. */
+    public List<CurrentChatState> listRefreshableStates() {
+        List<CurrentChatState> result = new ArrayList<>();
+        ScanParams params = new ScanParams().match(SCAN_PATTERN).count(200);
         String cursor = ScanParams.SCAN_POINTER_START;
         do {
             ScanResult<String> scanResult = redis.scan(cursor, params);
@@ -55,8 +59,8 @@ public final class ChatViewRepository {
                 if (fields.isEmpty()) {
                     continue;
                 }
-                ChatViewState state = toState(RedisKeys.chatIdFromViewKey(key), fields);
-                if (state.type().isRefreshableList()) {
+                CurrentChatState state = toState(chatIdFromKey(key), fields);
+                if (state.state().isRefreshable()) {
                     result.add(state);
                 }
             }
@@ -64,11 +68,19 @@ public final class ChatViewRepository {
         return result;
     }
 
-    private static ChatViewState toState(long chatId, Map<String, String> fields) {
-        return new ChatViewState(
+    private static CurrentChatState toState(long chatId, Map<String, String> fields) {
+        return new CurrentChatState(
                 chatId,
-                ChatViewType.valueOf(fields.get("type")),
+                ChatState.valueOf(fields.get("state")),
                 Integer.parseInt(fields.get("messageId")),
                 fields.get("username"));
+    }
+
+    private static String chatViewKey(long chatId) {
+        return "chatview:" + chatId;
+    }
+
+    private static long chatIdFromKey(String key) {
+        return Long.parseLong(key.substring("chatview:".length()));
     }
 }

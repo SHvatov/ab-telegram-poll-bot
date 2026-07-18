@@ -1,6 +1,5 @@
 package academy.backend.pollbot.repository;
 
-import academy.backend.pollbot.redis.RedisKeys;
 import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.params.SetParams;
 
@@ -22,8 +21,12 @@ public final class UserRepository {
      * @return true if this call created a new registration, false if the user was already registered
      */
     public boolean registerIfAbsent(String username) {
-        String result = redis.set(RedisKeys.user(username), Instant.now().toString(),
+        String result = redis.set(userKey(username), Instant.now().toString(),
                 SetParams.setParams().nx().ex(ttlSeconds));
         return "OK".equals(result);
+    }
+
+    private static String userKey(String username) {
+        return "user:" + username;
     }
 }

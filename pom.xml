@@ -17,8 +17,9 @@
 
         <telegrambots.version>10.0.0</telegrambots.version>
         <jackson.version>2.22.1</jackson.version>
-        <jedis.version>7.1.0</jedis.version>
+        <jedis.version>7.4.0</jedis.version>
         <logback.version>1.5.38</logback.version>
+        <caffeine.version>3.2.4</caffeine.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
 
         <main.class>academy.backend.pollbot.Main</main.class>
@@ -61,6 +62,13 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+        </dependency>
+
+        <!-- Per-chat mailbox eviction in ChatSequencer -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
         </dependency>
     </dependencies>
 

@@ -6,28 +6,31 @@ import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsume
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
- * Dispatches every incoming update to its own virtual thread, so one slow or
- * misbehaving chat can never block processing of the others.
+ * Dispatches every incoming update onto a per-chat virtual-thread lane (see {@link ChatSequencer}):
+ * different chats are handled fully in parallel, but updates for the same chat are always
+ * processed one at a time, in order.
  */
 public final class PollBotUpdateConsumer implements LongPollingUpdateConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(PollBotUpdateConsumer.class);
 
-    private final ExecutorService virtualThreadExecutor;
+    private final ChatSequencer chatSequencer;
     private final BotService botService;
 
-    public PollBotUpdateConsumer(ExecutorService virtualThreadExecutor, BotService botService) {
-        this.virtualThreadExecutor = virtualThreadExecutor;
+    public PollBotUpdateConsumer(ChatSequencer chatSequencer, BotService botService) {
+        this.chatSequencer = chatSequencer;
         this.botService = botService;
     }
 
     @Override
     public void consume(List<Update> updates) {
         for (Update update : updates) {
-            virtualThreadExecutor.execute(() -> handle(update));
+            Long chatId = chatIdOf(update);
+            if (chatId != null) {
+                chatSequencer.execute(chatId, () -> handle(update));
+            }
         }
     }
 
@@ -42,5 +45,15 @@ public final class PollBotUpdateConsumer implements LongPollingUpdateConsumer {
         } catch (Exception e) {
             log.error("Unhandled error while processing update {}", update.getUpdateId(), e);
         }
+    }
+
+    private static Long chatIdOf(Update update) {
+        if (update.hasCallbackQuery()) {
+            return update.getCallbackQuery().getMessage().getChatId();
+        }
+        if (update.hasMessage()) {
+            return update.getMessage().getChatId();
+        }
+        return null;
     }
 }

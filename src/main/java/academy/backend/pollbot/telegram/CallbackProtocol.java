@@ -8,7 +8,7 @@ import java.util.Optional;
  * Encodes/decodes the small string protocol carried in inline keyboard callback_data
  * (Telegram caps this at 64 bytes, hence the terse prefixes).
  */
-public final class CallbackData {
+public final class CallbackProtocol {
 
     public static final String MENU = "menu";
     public static final String MENU_VOTE = "menu:vote";
@@ -22,7 +22,7 @@ public final class CallbackData {
     private static final String RATING_OPEN_PREFIX = "rating:open:";
     private static final String VOTE_RATE_PREFIX = "vote:rate:";
 
-    private CallbackData() {
+    private CallbackProtocol() {
     }
 
     public static String voteOpen(String memeCode) {

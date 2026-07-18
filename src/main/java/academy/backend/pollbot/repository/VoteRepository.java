@@ -1,7 +1,6 @@
 package academy.backend.pollbot.repository;
 
 import academy.backend.pollbot.domain.Rating;
-import academy.backend.pollbot.redis.RedisKeys;
 import redis.clients.jedis.UnifiedJedis;
 
 import java.util.Comparator;
@@ -21,12 +20,12 @@ public final class VoteRepository {
     }
 
     public Optional<Rating> getUserVote(String username, String memeCode) {
-        String value = redis.hget(RedisKeys.userVotes(username), memeCode);
+        String value = redis.hget(userVotesKey(username), memeCode);
         return value == null ? Optional.empty() : Optional.of(Rating.valueOf(value));
     }
 
     public Map<String, Rating> getUserVotes(String username) {
-        return redis.hgetAll(RedisKeys.userVotes(username)).entrySet().stream()
+        return redis.hgetAll(userVotesKey(username)).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> Rating.valueOf(e.getValue())));
     }
 
@@ -36,14 +35,14 @@ public final class VoteRepository {
      * @return true if the vote was recorded, false if the user had already voted
      */
     public boolean saveVoteIfAbsent(String username, String memeCode, Rating rating) {
-        String userVotesKey = RedisKeys.userVotes(username);
+        String userVotesKey = userVotesKey(username);
         long added = redis.hsetnx(userVotesKey, memeCode, rating.name());
         if (added == 0) {
             return false;
         }
         redis.expire(userVotesKey, ttlSeconds);
 
-        String globalVotesKey = RedisKeys.memeVotes(memeCode);
+        String globalVotesKey = memeVotesKey(memeCode);
         redis.rpush(globalVotesKey, rating.name());
         redis.expire(globalVotesKey, ttlSeconds);
         return true;
@@ -54,7 +53,7 @@ public final class VoteRepository {
      * the better rating (lower {@link Rating#rank()}).
      */
     public Optional<Rating> getGlobalRating(String memeCode) {
-        List<String> votes = redis.lrange(RedisKeys.memeVotes(memeCode), 0, -1);
+        List<String> votes = redis.lrange(memeVotesKey(memeCode), 0, -1);
         if (votes.isEmpty()) {
             return Optional.empty();
         }
@@ -65,5 +64,13 @@ public final class VoteRepository {
                 .max(Comparator.<Map.Entry<Rating, Long>>comparingLong(Map.Entry::getValue)
                         .thenComparing(e -> -e.getKey().rank()))
                 .map(Map.Entry::getKey);
+    }
+
+    private static String userVotesKey(String username) {
+        return "user:" + username + ":votes";
+    }
+
+    private static String memeVotesKey(String memeCode) {
+        return "meme:" + memeCode + ":votes";
     }
 }

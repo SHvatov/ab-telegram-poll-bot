@@ -1,13 +1,13 @@
 package academy.backend.pollbot.scheduler;
 
-import academy.backend.pollbot.redis.ChatViewState;
+import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.telegram.BotService;
+import academy.backend.pollbot.telegram.ChatSequencer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -15,8 +15,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Every {@code refreshIntervalSeconds}, re-renders every currently open vote/rating list so
  * ratings stay up to date for anyone looking at one. The ticker itself is a single lightweight
- * thread; the actual per-chat Telegram calls are fanned out onto the shared virtual-thread pool
- * so a slow chat can't delay the others or the next tick.
+ * thread; the actual per-chat Telegram calls are fanned out onto the same {@link ChatSequencer}
+ * used for live updates, so a refresh tick for a chat can never race a live interaction (or
+ * another tick) for that same chat, while different chats still refresh fully in parallel.
  */
 public final class ListRefreshScheduler {
 
@@ -28,16 +29,16 @@ public final class ListRefreshScheduler {
         return thread;
     });
 
-    private final ExecutorService virtualThreadExecutor;
+    private final ChatSequencer chatSequencer;
     private final ChatViewRepository chatViewRepository;
     private final BotService botService;
     private final int refreshIntervalSeconds;
 
-    public ListRefreshScheduler(ExecutorService virtualThreadExecutor,
+    public ListRefreshScheduler(ChatSequencer chatSequencer,
                                  ChatViewRepository chatViewRepository,
                                  BotService botService,
                                  int refreshIntervalSeconds) {
-        this.virtualThreadExecutor = virtualThreadExecutor;
+        this.chatSequencer = chatSequencer;
         this.chatViewRepository = chatViewRepository;
         this.botService = botService;
         this.refreshIntervalSeconds = refreshIntervalSeconds;
@@ -53,19 +54,19 @@ public final class ListRefreshScheduler {
     }
 
     private void tick() {
-        List<ChatViewState> views;
+        List<CurrentChatState> states;
         try {
-            views = chatViewRepository.listRefreshableViews();
+            states = chatViewRepository.listRefreshableStates();
         } catch (RuntimeException e) {
-            log.error("Failed to list refreshable chat views", e);
+            log.error("Failed to list refreshable chat states", e);
             return;
         }
-        for (ChatViewState state : views) {
-            virtualThreadExecutor.execute(() -> refreshSafely(state));
+        for (CurrentChatState state : states) {
+            chatSequencer.execute(state.chatId(), () -> refreshSafely(state));
         }
     }
 
-    private void refreshSafely(ChatViewState state) {
+    private void refreshSafely(CurrentChatState state) {
         try {
             botService.refreshList(state);
         } catch (RuntimeException e) {

@@ -1,8 +1,10 @@
-# Bot token is intentionally NOT stored here - it is read from the
-# TELEGRAM_BOT_TOKEN environment variable at startup.
+# ${VAR} is required (fails startup if unset); ${VAR:default} falls back to `default`.
+bot:
+  token: "${TELEGRAM_BOT_TOKEN}"
+
 redis:
-  host: localhost
-  port: 6379
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
 
 scheduler:
   refresh-interval-seconds: 60
