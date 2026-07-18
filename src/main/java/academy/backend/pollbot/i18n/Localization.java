@@ -2,7 +2,6 @@ package academy.backend.pollbot.i18n;
 
 import java.util.Map;
 
-/** Resolves {@code {placeholder}} tokens against a flat "dot.path" -> text map loaded once at startup. */
 public final class Localization {
 
     private final Map<String, String> messages;

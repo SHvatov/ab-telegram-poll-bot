@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** The read-only global ratings list, and looking at one meme's photo with its global rating. */
 public final class RatingFlow {
 
     private final TelegramGateway gateway;
@@ -43,7 +42,6 @@ public final class RatingFlow {
         chatViewRepository.setState(chatId, ChatState.WATCHING_MEME_RATINGS, messageId, username);
     }
 
-    /** Invoked by the background scheduler to refresh an already-open list in place. */
     public void refreshList(CurrentChatState state) {
         ScreenContent content = buildListContent();
         gateway.renderText(state.chatId(), state, content.text(), content.keyboard());

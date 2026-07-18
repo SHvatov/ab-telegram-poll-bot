@@ -15,11 +15,6 @@ public final class UserRepository {
         this.ttlSeconds = ttlSeconds;
     }
 
-    /**
-     * Registers the user if they are not already known.
-     *
-     * @return true if this call created a new registration, false if the user was already registered
-     */
     public boolean registerIfAbsent(String username) {
         String result = redis.set(userKey(username), Instant.now().toString(),
                 SetParams.setParams().nx().ex(ttlSeconds));

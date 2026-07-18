@@ -12,13 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Every {@code refreshIntervalSeconds}, re-renders every currently open vote/rating list so
- * ratings stay up to date for anyone looking at one. The ticker itself is a single lightweight
- * thread; the actual per-chat Telegram calls are fanned out onto the same {@link ChatSequencer}
- * used for live updates, so a refresh tick for a chat can never race a live interaction (or
- * another tick) for that same chat, while different chats still refresh fully in parallel.
- */
 public final class ListRefreshScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(ListRefreshScheduler.class);

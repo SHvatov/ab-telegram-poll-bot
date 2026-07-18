@@ -20,11 +20,6 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.Optional;
 
-/**
- * Registers users and routes {@code /start} / callback-query updates to the right flow
- * (menu, voting, or read-only ratings). The actual screen rendering lives in
- * {@link MenuFlow}, {@link VoteFlow} and {@link RatingFlow}; this class only dispatches.
- */
 public final class BotService {
 
     private static final Logger log = LoggerFactory.getLogger(BotService.class);
@@ -103,7 +98,6 @@ public final class BotService {
         gateway.answerCallbackQuery(query.getId(), alertText);
     }
 
-    /** Invoked by the background scheduler to refresh an already-open vote/rating list in place. */
     public void refreshList(CurrentChatState state) {
         if (state.state() == ChatState.CHOOSING_MEME) {
             voteFlow.refreshList(state);

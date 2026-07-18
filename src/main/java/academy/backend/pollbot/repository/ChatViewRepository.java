@@ -10,21 +10,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Tracks which screen (and Telegram message) is currently shown in each chat, so that
- * navigation knows whether to edit the existing message or send a new one, and so the
- * background scheduler knows which open lists to refresh (and for whom).
- * <p>
- * Chats in a {@link ChatState#isRefreshable()} state are also indexed in a dedicated set, so the
- * scheduler can read exactly the chats it needs in O(1) instead of scanning every {@code chatview:*}
- * key in the keyspace on every tick.
- */
 public final class ChatViewRepository {
 
     private static final String REFRESHABLE_SET_KEY = "chatview:refreshable";
 
-    /** How long an untouched chat-view pointer survives before the scheduler stops refreshing it. */
-    private static final long VIEW_TTL_SECONDS = 60 * 60; // 1 hour
+    private static final long VIEW_TTL_SECONDS = 60 * 60;
 
     private final UnifiedJedis redis;
 
@@ -56,7 +46,6 @@ public final class ChatViewRepository {
         return Optional.of(toState(chatId, fields));
     }
 
-    /** All chats currently showing a live-refreshable screen. */
     public List<CurrentChatState> listRefreshableStates() {
         Set<String> chatIds = redis.smembers(REFRESHABLE_SET_KEY);
         List<CurrentChatState> result = new ArrayList<>(chatIds.size());
@@ -64,8 +53,7 @@ public final class ChatViewRepository {
             long chatId = Long.parseLong(chatIdStr);
             Map<String, String> fields = redis.hgetAll(chatViewKey(chatId));
             if (fields.isEmpty()) {
-                // The chat-view hash TTL'd out without a matching setState() call; drop the
-                // now-stale membership instead of retrying it forever.
+
                 redis.srem(REFRESHABLE_SET_KEY, chatIdStr);
                 continue;
             }

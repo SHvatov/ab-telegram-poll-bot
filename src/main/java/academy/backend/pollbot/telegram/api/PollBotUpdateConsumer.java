@@ -9,11 +9,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.List;
 
-/**
- * Dispatches every incoming update onto a per-chat virtual-thread lane (see {@link ChatSequencer}):
- * different chats are handled fully in parallel, but updates for the same chat are always
- * processed one at a time, in order.
- */
 public final class PollBotUpdateConsumer implements LongPollingUpdateConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(PollBotUpdateConsumer.class);

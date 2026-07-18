@@ -7,7 +7,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-/** Query operations over the meme catalog loaded from {@code memes.yml}. */
 public final class MemeManager {
 
     private final List<MemeDefinition> memes;

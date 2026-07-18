@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Picking a meme to vote on, casting a vote, and seeing your own vote for it. */
 public final class VoteFlow {
 
     private final TelegramGateway gateway;
@@ -44,7 +43,6 @@ public final class VoteFlow {
         chatViewRepository.setState(chatId, ChatState.CHOOSING_MEME, messageId, username);
     }
 
-    /** Invoked by the background scheduler to refresh an already-open list in place. */
     public void refreshList(CurrentChatState state) {
         ScreenContent content = buildListContent(state.username());
         gateway.renderText(state.chatId(), state, content.text(), content.keyboard());
@@ -73,7 +71,6 @@ public final class VoteFlow {
         chatViewRepository.setState(chatId, ChatState.RATING_MEME, messageId, username);
     }
 
-    /** @return the alert text to show the user via answerCallbackQuery */
     public String submitVote(long chatId, String username, String memeCode, Rating rating) {
         Optional<MemeDefinition> memeOpt = memeManager.findByCode(memeCode);
         if (memeOpt.isEmpty()) {

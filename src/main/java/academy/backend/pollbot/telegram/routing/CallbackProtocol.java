@@ -4,10 +4,6 @@ import academy.backend.pollbot.domain.Rating;
 
 import java.util.Optional;
 
-/**
- * Encodes/decodes the small string protocol carried in inline keyboard callback_data
- * (Telegram caps this at 64 bytes, hence the terse prefixes).
- */
 public final class CallbackProtocol {
 
     public static final String MENU = "menu";

@@ -12,7 +12,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.util.List;
 import java.util.Map;
 
-/** The main menu, and the stub screen for the not-yet-implemented tier-list commands. */
 public final class MenuFlow {
 
     private final TelegramGateway gateway;
@@ -29,7 +28,6 @@ public final class MenuFlow {
         render(chatId, username, localization.get("menu.title"));
     }
 
-    /** Used on {@code /start}: the greeting and the main menu are a single message. */
     public void showMainMenuWithGreeting(long chatId, String username) {
         String text = localization.get("welcome.greeting", Map.of("username", username))
                 + "\n\n" + localization.get("menu.title");
@@ -42,7 +40,6 @@ public final class MenuFlow {
         chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
     }
 
-    /** Rendered as a {@link ChatState#MENU} screen too - it's just text with a back button. */
     public void showNotImplemented(long chatId, String username) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.OffsetDateTime;
 
-/** A single meme catalog entry, as loaded from {@code memes.yml}. Pure data, no behavior. */
 public record MemeDefinition(
         int position,
         String code,

@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-/** Flattens the nested {@code i18n/ru.yml} tree into a "dot.path" -> text map. */
 public final class LocalizationLoader extends AbstractYamlConfigLoader<Map<String, String>> {
 
     private final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());

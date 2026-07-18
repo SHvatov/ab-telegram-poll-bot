@@ -6,10 +6,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.util.List;
 
-/** Shared inline-keyboard building blocks used across the bot's screens. */
 final class Keyboards {
 
-    /** Telegram's hard cap on inline button label length. */
     static final int BUTTON_TEXT_MAX_LENGTH = 64;
 
     private Keyboards() {

@@ -43,8 +43,6 @@ public final class Main {
         BotService botService = BotService.create(
                 telegramClient, memeManager, localization, userRepository, voteRepository, chatViewRepository);
 
-        // Every update - live or a background refresh - for a given chat runs strictly in order,
-        // on a virtual thread; different chats are handled fully in parallel.
         ChatSequencer chatSequencer = new ChatSequencer();
         PollBotUpdateConsumer updateConsumer = new PollBotUpdateConsumer(chatSequencer, botService);
 

@@ -23,12 +23,6 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.Locale;
 
-/**
- * All direct Telegram Bot API calls used to render the bot's screens, plus the edit-vs-resend
- * policy: text states are edited in place, but Telegram cannot convert a message between text and
- * photo via an edit, so transitions to/from a photo state always delete the old message and send
- * a new one (see {@link academy.backend.pollbot.domain.ChatState}).
- */
 public final class TelegramGateway {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramGateway.class);
@@ -39,7 +33,6 @@ public final class TelegramGateway {
         this.telegramClient = telegramClient;
     }
 
-    /** Renders a text screen, editing the previous message in place when possible. */
     public int renderText(long chatId, CurrentChatState previous, String text, InlineKeyboardMarkup keyboard) {
         if (previous != null && previous.state().isText()) {
             editText(chatId, previous.messageId(), text, keyboard);
@@ -51,7 +44,6 @@ public final class TelegramGateway {
         return sendText(chatId, text, keyboard);
     }
 
-    /** Renders a photo screen. Always deletes the previous message and sends a new one. */
     public int renderPhoto(long chatId, CurrentChatState previous, String resourcePath, String caption,
                             InlineKeyboardMarkup keyboard) {
         if (previous != null) {
@@ -60,7 +52,6 @@ public final class TelegramGateway {
         return sendPhoto(chatId, resourcePath, caption, keyboard);
     }
 
-    /** Updates only the caption/keyboard of an already-open photo screen, without resending it. */
     public void updatePhotoCaption(long chatId, int messageId, String caption, InlineKeyboardMarkup keyboard) {
         EditMessageCaption method = EditMessageCaption.builder()
                 .chatId(chatId)
@@ -113,8 +104,7 @@ public final class TelegramGateway {
         if (in == null) {
             throw new IllegalStateException("Meme image not found on classpath: " + resourcePath);
         }
-        // The stream must stay open for the whole upload, so execute() has to happen inside this
-        // try-with-resources rather than after it.
+
         try (in) {
             String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
             SendPhoto method = SendPhoto.builder()
@@ -143,13 +133,6 @@ public final class TelegramGateway {
         }
     }
 
-    /**
-     * Execute-around: every {@link BotApiMethod} call needs the same "wrap failures into
-     * {@link BotOperationException}" handling, so the try/catch lives here once. Note this can't
-     * cover {@link SendPhoto} - its multipart upload puts it under {@code PartialBotApiMethod}
-     * rather than {@code BotApiMethod} in the library's type hierarchy, so {@link #sendPhoto}
-     * handles its own call.
-     */
     private <T extends Serializable, M extends BotApiMethod<T>> T executeSafely(M method, long chatId, String actionText) {
         try {
             return telegramClient.execute(method);
@@ -158,13 +141,6 @@ public final class TelegramGateway {
         }
     }
 
-    /**
-     * Telegram's Bot API doesn't expose a distinct error code for "message is not modified" -
-     * every 4xx validation failure shares {@code error_code: 400}, and the description text is
-     * the only way to tell them apart. This checks the structured fields Telegram does give us
-     * ({@code error_code} and {@code description}) rather than pattern-matching the fully
-     * assembled {@link TelegramApiException#getMessage()} string.
-     */
     private static boolean isNotModified(TelegramApiException e) {
         if (!(e instanceof TelegramApiRequestException requestException)) {
             return false;
