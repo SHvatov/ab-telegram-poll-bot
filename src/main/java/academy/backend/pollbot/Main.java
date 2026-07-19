@@ -4,10 +4,10 @@ import academy.backend.pollbot.config.AppConfig;
 import academy.backend.pollbot.config.AppConfigLoader;
 import academy.backend.pollbot.config.MemesConfig;
 import academy.backend.pollbot.config.MemesConfigLoader;
+import academy.backend.pollbot.config.i18n.Localization;
+import academy.backend.pollbot.config.i18n.LocalizationLoader;
 import academy.backend.pollbot.core.concurrency.ChatSequencer;
 import academy.backend.pollbot.domain.MemeManager;
-import academy.backend.pollbot.i18n.Localization;
-import academy.backend.pollbot.i18n.LocalizationLoader;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.UserRepository;
 import academy.backend.pollbot.repository.VoteRepository;
@@ -34,7 +34,7 @@ public final class Main {
         Localization localization = new Localization(new LocalizationLoader().load());
 
         RedisClient redisClient = RedisClient.create(appConfig.redis().host(), appConfig.redis().port());
-        long ttlSeconds = Duration.ofDays(appConfig.data().ttlDays()).toSeconds();
+        long ttlSeconds = Duration.ofDays(appConfig.redis().ttlDays()).toSeconds();
         UserRepository userRepository = new UserRepository(redisClient, ttlSeconds);
         VoteRepository voteRepository = new VoteRepository(redisClient, ttlSeconds);
         ChatViewRepository chatViewRepository = new ChatViewRepository(redisClient);

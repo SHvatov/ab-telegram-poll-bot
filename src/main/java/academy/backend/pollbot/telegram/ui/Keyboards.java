@@ -17,6 +17,10 @@ final class Keyboards {
         return InlineKeyboardButton.builder().text(text).callbackData(callbackData).build();
     }
 
+    static InlineKeyboardButton urlButton(String text, String url) {
+        return InlineKeyboardButton.builder().text(text).url(url).build();
+    }
+
     static InlineKeyboardMarkup singleButtonKeyboard(String label, String callbackData) {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(new InlineKeyboardRow(button(label, callbackData))))

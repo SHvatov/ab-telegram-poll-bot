@@ -1,9 +1,9 @@
 package academy.backend.pollbot.telegram.ui;
 
+import academy.backend.pollbot.config.i18n.Localization;
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeDefinition;
 import academy.backend.pollbot.domain.MemeManager;
-import academy.backend.pollbot.i18n.Localization;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.VoteRepository;

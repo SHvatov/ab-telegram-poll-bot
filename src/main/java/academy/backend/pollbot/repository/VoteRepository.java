@@ -1,6 +1,8 @@
 package academy.backend.pollbot.repository;
 
 import academy.backend.pollbot.domain.Rating;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.UnifiedJedis;
 
 import java.util.Comparator;
@@ -12,6 +14,12 @@ import java.util.stream.Collectors;
 
 public final class VoteRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(VoteRepository.class);
+
+    // Atomically records the user's vote (KEYS[1], only if absent) and bumps the meme's rating
+    // counter (KEYS[2]) in a single round trip: HSETNX + HINCRBY as one uninterruptible Redis
+    // Lua script, so a crash or dropped connection between the two writes can't happen.
+    // ARGV[1] = meme code, ARGV[2] = rating name, ARGV[3] = TTL (seconds) for the user's vote hash.
     private static final String SAVE_VOTE_SCRIPT = """
             if redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2]) == 1 then
                 redis.call('EXPIRE', KEYS[1], ARGV[3])
@@ -44,7 +52,13 @@ public final class VoteRepository {
         Object result = redis.eval(SAVE_VOTE_SCRIPT,
                 List.of(userVotesKey(username), memeRatingKey(memeCode)),
                 List.of(memeCode, rating.name(), String.valueOf(ttlSeconds)));
-        return Objects.equals(result, 1L);
+        boolean saved = Objects.equals(result, 1L);
+        if (saved) {
+            log.info("User '{}' voted '{}' for meme '{}'", username, rating, memeCode);
+        } else {
+            log.debug("User '{}' already voted for meme '{}', ignoring", username, memeCode);
+        }
+        return saved;
     }
 
     public Optional<Rating> getGlobalRating(String memeCode) {

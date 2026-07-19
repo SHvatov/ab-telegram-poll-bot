@@ -1,8 +1,8 @@
 package academy.backend.pollbot.telegram.routing;
 
+import academy.backend.pollbot.config.i18n.Localization;
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeManager;
-import academy.backend.pollbot.i18n.Localization;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.UserRepository;
@@ -77,6 +77,8 @@ public final class BotService {
                 ratingFlow.showList(chatId, username);
             } else if (CallbackProtocol.MENU_MY_TIER.equals(data) || CallbackProtocol.MENU_GLOBAL_TIER.equals(data)) {
                 menuFlow.showNotImplemented(chatId, username);
+            } else if (CallbackProtocol.MENU_SOURCE.equals(data)) {
+                menuFlow.showSource(chatId, username);
             } else if (CallbackProtocol.VOTE_BACK.equals(data)) {
                 voteFlow.showList(chatId, username);
             } else if (CallbackProtocol.RATING_BACK.equals(data)) {

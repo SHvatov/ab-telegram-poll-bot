@@ -1,7 +1,7 @@
 package academy.backend.pollbot.telegram.ui;
 
+import academy.backend.pollbot.config.i18n.Localization;
 import academy.backend.pollbot.domain.ChatState;
-import academy.backend.pollbot.i18n.Localization;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.telegram.api.TelegramGateway;
@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class MenuFlow {
+
+    private static final String SOURCE_REPOSITORY_URL = "https://github.com/SHvatov/ab-telegram-poll-bot";
 
     private final TelegramGateway gateway;
     private final Localization localization;
@@ -48,12 +50,23 @@ public final class MenuFlow {
         chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
     }
 
+    public void showSource(long chatId, String username) {
+        CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder().keyboard(List.of(
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MENU)),
+                new InlineKeyboardRow(Keyboards.urlButton(localization.get("menu.button.source"), SOURCE_REPOSITORY_URL))
+        )).build();
+        int messageId = gateway.renderText(chatId, previous, localization.get("menu.source.text"), keyboard);
+        chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+    }
+
     private InlineKeyboardMarkup mainMenuKeyboard() {
         return InlineKeyboardMarkup.builder().keyboard(List.of(
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.vote"), CallbackProtocol.MENU_VOTE)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.rating"), CallbackProtocol.MENU_RATING)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.my-tier-list"), CallbackProtocol.MENU_MY_TIER)),
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.MENU_GLOBAL_TIER))
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.MENU_GLOBAL_TIER)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.source"), CallbackProtocol.MENU_SOURCE))
         )).build();
     }
 }

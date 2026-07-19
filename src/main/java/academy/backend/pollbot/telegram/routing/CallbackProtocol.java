@@ -11,6 +11,7 @@ public final class CallbackProtocol {
     public static final String MENU_RATING = "menu:rating";
     public static final String MENU_MY_TIER = "menu:mytier";
     public static final String MENU_GLOBAL_TIER = "menu:globaltier";
+    public static final String MENU_SOURCE = "menu:source";
     public static final String VOTE_BACK = "vote:back";
     public static final String RATING_BACK = "rating:back";
 

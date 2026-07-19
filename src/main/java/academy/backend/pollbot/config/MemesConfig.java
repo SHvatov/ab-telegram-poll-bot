@@ -5,8 +5,4 @@ import academy.backend.pollbot.domain.MemeDefinition;
 import java.util.List;
 
 public record MemesConfig(List<MemeDefinition> memes) {
-
-    public MemesConfig {
-        memes = List.copyOf(memes);
-    }
 }

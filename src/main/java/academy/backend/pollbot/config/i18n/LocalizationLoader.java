@@ -1,9 +1,7 @@
-package academy.backend.pollbot.i18n;
+package academy.backend.pollbot.config.i18n;
 
 import academy.backend.pollbot.loader.AbstractYamlConfigLoader;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -12,15 +10,13 @@ import java.util.Map;
 
 public final class LocalizationLoader extends AbstractYamlConfigLoader<Map<String, String>> {
 
-    private final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-
     public LocalizationLoader() {
-        super("/i18n/ru.yml");
+        super("/i18n/ru.yml", null);
     }
 
     @Override
     protected Map<String, String> parse(String yaml) throws IOException {
-        JsonNode root = mapper.readTree(yaml);
+        JsonNode root = YAML_MAPPER.readTree(yaml);
         Map<String, String> flat = new HashMap<>();
         flatten("", root, flat);
         return Map.copyOf(flat);

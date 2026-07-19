@@ -5,10 +5,7 @@ bot:
 redis:
   host: ${REDIS_HOST:localhost}
   port: ${REDIS_PORT:6379}
+  ttl-days: 7
 
 scheduler:
   refresh-interval-seconds: 60
-
-data:
-  # TTL for user registrations / votes stored in Redis.
-  ttl-days: 7

@@ -1,4 +1,4 @@
-package academy.backend.pollbot.i18n;
+package academy.backend.pollbot.config.i18n;
 
 import java.util.Map;
 

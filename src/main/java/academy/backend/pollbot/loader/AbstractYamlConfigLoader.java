@@ -1,5 +1,10 @@
 package academy.backend.pollbot.loader;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -11,10 +16,16 @@ public abstract class AbstractYamlConfigLoader<T> {
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([A-Za-z0-9_]+)(:([^}]*))?}");
 
-    private final String resourcePath;
+    protected static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory())
+            .registerModule(new JavaTimeModule())
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-    protected AbstractYamlConfigLoader(String resourcePath) {
+    private final String resourcePath;
+    private final Class<T> type;
+
+    protected AbstractYamlConfigLoader(String resourcePath, Class<T> type) {
         this.resourcePath = resourcePath;
+        this.type = type;
     }
 
     public final T load() {
@@ -26,7 +37,9 @@ public abstract class AbstractYamlConfigLoader<T> {
         }
     }
 
-    protected abstract T parse(String yaml) throws IOException;
+    protected T parse(String yaml) throws IOException {
+        return YAML_MAPPER.readValue(yaml, type);
+    }
 
     private String readResourceText() {
         try (InputStream in = getClass().getResourceAsStream(resourcePath)) {
