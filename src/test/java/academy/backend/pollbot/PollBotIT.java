@@ -125,7 +125,7 @@ class PollBotIT {
         Message message = Message.builder()
                 .messageId(1)
                 .chat(Chat.builder().id(chatId).type("private").build())
-                .from(User.builder().id(chatId).userName(username).isBot(false).build())
+                .from(testUser(chatId, username))
                 .text("/start")
                 .date((int) (System.currentTimeMillis() / 1000))
                 .build();
@@ -142,13 +142,17 @@ class PollBotIT {
                 .build();
         CallbackQuery callbackQuery = new CallbackQuery();
         callbackQuery.setId("cbq-" + updateId);
-        callbackQuery.setFrom(User.builder().id(chatId).userName(username).isBot(false).build());
+        callbackQuery.setFrom(testUser(chatId, username));
         callbackQuery.setData(data);
         callbackQuery.setMessage(contextMessage);
         Update update = new Update();
         update.setUpdateId(updateId);
         update.setCallbackQuery(callbackQuery);
         return update;
+    }
+
+    private static User testUser(long chatId, String username) {
+        return User.builder().id(chatId).userName(username).firstName(username).isBot(false).build();
     }
 
     private static void awaitTrue(BooleanSupplier condition) throws InterruptedException {
