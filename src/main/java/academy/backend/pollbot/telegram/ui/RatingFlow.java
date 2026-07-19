@@ -12,7 +12,6 @@ import academy.backend.pollbot.telegram.routing.CallbackProtocol;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,7 @@ public final class RatingFlow {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         ScreenContent content = buildListContent();
         int messageId = gateway.renderText(chatId, previous, content.text(), content.keyboard());
-        chatViewRepository.setState(chatId, ChatState.WATCHING_MEME_RATINGS, messageId, username);
+        setState(chatId, ChatState.WATCHING_MEME_RATINGS, messageId, username);
     }
 
     public void refreshList(CurrentChatState state) {
@@ -53,7 +52,7 @@ public final class RatingFlow {
         if (memeOpt.isEmpty()) {
             InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
             int messageId = gateway.renderText(chatId, previous, localization.get("error.meme-not-found"), keyboard);
-            chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+            setState(chatId, ChatState.MENU, messageId, username);
             return;
         }
         MemeDefinition meme = memeOpt.get();
@@ -63,11 +62,11 @@ public final class RatingFlow {
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.RATING_BACK);
 
         int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-        chatViewRepository.setState(chatId, ChatState.WATCHING_MEME_RATING, messageId, username);
+        setState(chatId, ChatState.WATCHING_MEME_RATING, messageId, username);
     }
 
     private ScreenContent buildListContent() {
-        List<MemeDefinition> memes = memeManager.availableAsOf(OffsetDateTime.now());
+        List<MemeDefinition> memes = memeManager.availableAsOf();
         if (memes.isEmpty()) {
             InlineKeyboardMarkup backToMenu = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
             return new ScreenContent(localization.get("rating.list.empty"), backToMenu);
@@ -91,5 +90,14 @@ public final class RatingFlow {
                 "description", meme.description(),
                 "globalRating", globalRatingText));
         return Keyboards.truncateButtonText(label);
+    }
+
+    private void setState(long chatId, ChatState state, int messageId, String username) {
+        chatViewRepository.setState(chatId, state, messageId, username);
+        if (state.isRefreshable()) {
+            chatViewRepository.markAsRefreshable(chatId);
+        } else {
+            chatViewRepository.unmarkAsRefreshable(chatId);
+        }
     }
 }

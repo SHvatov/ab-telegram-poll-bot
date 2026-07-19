@@ -7,7 +7,7 @@ WORKDIR /build
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 COPY src ./src
-RUN mvn -B -q package -DskipTests
+RUN mvn -B -q package
 
 FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app

@@ -39,7 +39,7 @@ public final class MenuFlow {
     private void render(long chatId, String username, String text) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard());
-        chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, username);
     }
 
     public void showNotImplemented(long chatId, String username) {
@@ -47,7 +47,7 @@ public final class MenuFlow {
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(
                 localization.get("menu.button.back"), CallbackProtocol.MENU);
         int messageId = gateway.renderText(chatId, previous, localization.get("menu.not-implemented"), keyboard);
-        chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, username);
     }
 
     public void showSource(long chatId, String username) {
@@ -57,7 +57,7 @@ public final class MenuFlow {
                 new InlineKeyboardRow(Keyboards.urlButton(localization.get("menu.button.source"), SOURCE_REPOSITORY_URL))
         )).build();
         int messageId = gateway.renderText(chatId, previous, localization.get("menu.source.text"), keyboard);
-        chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, username);
     }
 
     private InlineKeyboardMarkup mainMenuKeyboard() {
@@ -68,5 +68,15 @@ public final class MenuFlow {
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.MENU_GLOBAL_TIER)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.source"), CallbackProtocol.MENU_SOURCE))
         )).build();
+    }
+
+    /** Persists the screen and decides whether it belongs in the scheduler's refresh set. */
+    private void setState(long chatId, ChatState state, int messageId, String username) {
+        chatViewRepository.setState(chatId, state, messageId, username);
+        if (state.isRefreshable()) {
+            chatViewRepository.markAsRefreshable(chatId);
+        } else {
+            chatViewRepository.unmarkAsRefreshable(chatId);
+        }
     }
 }

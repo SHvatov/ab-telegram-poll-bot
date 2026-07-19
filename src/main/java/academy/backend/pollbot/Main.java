@@ -21,6 +21,7 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import redis.clients.jedis.RedisClient;
 
+import java.time.Clock;
 import java.time.Duration;
 
 public final class Main {
@@ -30,10 +31,11 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         AppConfig appConfig = new AppConfigLoader().load();
         MemesConfig memesConfig = new MemesConfigLoader().load();
-        MemeManager memeManager = new MemeManager(memesConfig);
+        MemeManager memeManager = new MemeManager(memesConfig, Clock.systemUTC());
         Localization localization = new Localization(new LocalizationLoader().load());
 
-        RedisClient redisClient = RedisClient.create(appConfig.redis().host(), appConfig.redis().port());
+        RedisClient redisClient = RedisClient.create(
+                appConfig.redis().host(), Integer.parseInt(appConfig.redis().port()));
         long ttlSeconds = Duration.ofDays(appConfig.redis().ttlDays()).toSeconds();
         UserRepository userRepository = new UserRepository(redisClient, ttlSeconds);
         VoteRepository voteRepository = new VoteRepository(redisClient, ttlSeconds);

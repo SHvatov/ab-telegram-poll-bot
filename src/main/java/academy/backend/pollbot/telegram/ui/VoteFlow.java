@@ -13,7 +13,6 @@ import academy.backend.pollbot.telegram.routing.CallbackProtocol;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +39,7 @@ public final class VoteFlow {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         ScreenContent content = buildListContent(username);
         int messageId = gateway.renderText(chatId, previous, content.text(), content.keyboard());
-        chatViewRepository.setState(chatId, ChatState.CHOOSING_MEME, messageId, username);
+        setState(chatId, ChatState.CHOOSING_MEME, messageId, username);
     }
 
     public void refreshList(CurrentChatState state) {
@@ -68,7 +67,7 @@ public final class VoteFlow {
             keyboard = rateButtonsKeyboard(memeCode);
         }
         int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-        chatViewRepository.setState(chatId, ChatState.RATING_MEME, messageId, username);
+        setState(chatId, ChatState.RATING_MEME, messageId, username);
     }
 
     public String submitVote(long chatId, String username, String memeCode, Rating rating) {
@@ -77,7 +76,7 @@ public final class VoteFlow {
             return localization.get("error.meme-not-found");
         }
         MemeDefinition meme = memeOpt.get();
-        if (!memeManager.isAvailable(meme, OffsetDateTime.now())) {
+        if (!memeManager.isAvailable(meme)) {
             return localization.get("vote.unavailable-alert");
         }
         if (!voteRepository.saveVoteIfAbsent(username, memeCode, rating)) {
@@ -90,10 +89,10 @@ public final class VoteFlow {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         if (previous != null && previous.state() == ChatState.RATING_MEME) {
             gateway.updatePhotoCaption(chatId, previous.messageId(), caption, keyboard);
-            chatViewRepository.setState(chatId, ChatState.RATING_MEME, previous.messageId(), username);
+            setState(chatId, ChatState.RATING_MEME, previous.messageId(), username);
         } else {
             int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-            chatViewRepository.setState(chatId, ChatState.RATING_MEME, messageId, username);
+            setState(chatId, ChatState.RATING_MEME, messageId, username);
         }
         return localization.get("vote.saved-alert");
     }
@@ -101,11 +100,11 @@ public final class VoteFlow {
     private void showError(long chatId, CurrentChatState previous, String username, String message) {
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
         int messageId = gateway.renderText(chatId, previous, message, keyboard);
-        chatViewRepository.setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, username);
     }
 
     private ScreenContent buildListContent(String username) {
-        List<MemeDefinition> memes = memeManager.availableAsOf(OffsetDateTime.now());
+        List<MemeDefinition> memes = memeManager.availableAsOf();
         if (memes.isEmpty()) {
             return new ScreenContent(localization.get("vote.list.empty"), backToMenuKeyboard());
         }
@@ -160,5 +159,14 @@ public final class VoteFlow {
                         "description", meme.description(),
                         "globalRating", globalRatingText));
         return Keyboards.truncateButtonText(label);
+    }
+
+    private void setState(long chatId, ChatState state, int messageId, String username) {
+        chatViewRepository.setState(chatId, state, messageId, username);
+        if (state.isRefreshable()) {
+            chatViewRepository.markAsRefreshable(chatId);
+        } else {
+            chatViewRepository.unmarkAsRefreshable(chatId);
+        }
     }
 }
