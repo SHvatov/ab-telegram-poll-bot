@@ -14,7 +14,6 @@ import academy.backend.pollbot.telegram.ui.VoteFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -52,46 +51,27 @@ public final class BotService {
     }
 
     public void handleStart(Message message) {
-        String username = resolveUsername(message.getFrom());
-        userRepository.registerIfAbsent(username);
-        menuFlow.showMainMenuWithGreeting(message.getChatId(), username);
+        long userId = message.getFrom().getId();
+        userRepository.registerIfAbsent(userId);
+        menuFlow.showMainMenuWithGreeting(message.getChatId(), userId);
+    }
+
+    /** Any message that isn't a recognized command - the bot is button-driven, so this always gets a visible reply. */
+    public void handleUnknownMessage(Message message) {
+        long userId = message.getFrom().getId();
+        userRepository.registerIfAbsent(userId);
+        menuFlow.showUnknownCommand(message.getChatId(), userId);
     }
 
     public void handleCallback(CallbackQuery query) {
-        String username = resolveUsername(query.getFrom());
-        userRepository.registerIfAbsent(username);
+        long userId = query.getFrom().getId();
+        userRepository.registerIfAbsent(userId);
         long chatId = query.getMessage().getChatId();
         String data = query.getData();
-        String alertText = null;
+        String alertText;
 
         try {
-            Optional<String> voteOpen = CallbackProtocol.parseVoteOpen(data);
-            Optional<String> ratingOpen = CallbackProtocol.parseRatingOpen(data);
-            Optional<CallbackProtocol.VoteRate> voteRate = CallbackProtocol.parseVoteRate(data);
-
-            if (CallbackProtocol.MENU.equals(data)) {
-                menuFlow.showMainMenu(chatId, username);
-            } else if (CallbackProtocol.MENU_VOTE.equals(data)) {
-                voteFlow.showList(chatId, username);
-            } else if (CallbackProtocol.MENU_RATING.equals(data)) {
-                ratingFlow.showList(chatId, username);
-            } else if (CallbackProtocol.MENU_MY_TIER.equals(data) || CallbackProtocol.MENU_GLOBAL_TIER.equals(data)) {
-                menuFlow.showNotImplemented(chatId, username);
-            } else if (CallbackProtocol.MENU_SOURCE.equals(data)) {
-                menuFlow.showSource(chatId, username);
-            } else if (CallbackProtocol.VOTE_BACK.equals(data)) {
-                voteFlow.showList(chatId, username);
-            } else if (CallbackProtocol.RATING_BACK.equals(data)) {
-                ratingFlow.showList(chatId, username);
-            } else if (voteOpen.isPresent()) {
-                voteFlow.openMeme(chatId, username, voteOpen.get());
-            } else if (ratingOpen.isPresent()) {
-                ratingFlow.openMeme(chatId, username, ratingOpen.get());
-            } else if (voteRate.isPresent()) {
-                alertText = voteFlow.submitVote(chatId, username, voteRate.get().memeCode(), voteRate.get().rating());
-            } else {
-                log.warn("Unrecognized callback data: {}", data);
-            }
+            alertText = dispatch(chatId, userId, data);
         } catch (RuntimeException e) {
             log.error("Failed to handle callback '{}' for chat {}", data, chatId, e);
             alertText = localization.get("error.generic");
@@ -100,16 +80,44 @@ public final class BotService {
         gateway.answerCallbackQuery(query.getId(), alertText);
     }
 
+    private String dispatch(long chatId, long userId, String data) {
+        Optional<String> voteOpen = CallbackProtocol.parseOpenMemeForVote(data);
+        Optional<String> ratingOpen = CallbackProtocol.parseOpenMemeForRating(data);
+        Optional<CallbackProtocol.SubmitVote> submitVote = CallbackProtocol.parseSubmitVote(data);
+
+        if (CallbackProtocol.MAIN_MENU.equals(data)) {
+            menuFlow.showMainMenu(chatId, userId);
+        } else if (CallbackProtocol.SHOW_VOTE_LIST.equals(data)) {
+            voteFlow.showList(chatId, userId);
+        } else if (CallbackProtocol.SHOW_RATING_LIST.equals(data)) {
+            ratingFlow.showList(chatId, userId);
+        } else if (CallbackProtocol.MY_TIER_LIST.equals(data) || CallbackProtocol.GLOBAL_TIER_LIST.equals(data)) {
+            menuFlow.showNotImplemented(chatId, userId);
+        } else if (CallbackProtocol.SOURCE.equals(data)) {
+            menuFlow.showSource(chatId, userId);
+        } else if (CallbackProtocol.VOTE_LIST_BACK.equals(data)) {
+            voteFlow.showList(chatId, userId);
+        } else if (CallbackProtocol.RATING_LIST_BACK.equals(data)) {
+            ratingFlow.showList(chatId, userId);
+        } else if (voteOpen.isPresent()) {
+            voteFlow.openMeme(chatId, userId, voteOpen.get());
+        } else if (ratingOpen.isPresent()) {
+            ratingFlow.openMeme(chatId, userId, ratingOpen.get());
+        } else if (submitVote.isPresent()) {
+            return voteFlow.submitVote(chatId, userId, submitVote.get().memeToken(), submitVote.get().rating());
+        } else {
+            log.warn("Unrecognized callback data for chat {}: {}", chatId, data);
+            menuFlow.showUnknownCommand(chatId, userId);
+            return localization.get("error.unknown-command");
+        }
+        return null;
+    }
+
     public void refreshList(CurrentChatState state) {
         if (state.state() == ChatState.CHOOSING_MEME) {
             voteFlow.refreshList(state);
         } else if (state.state() == ChatState.WATCHING_MEME_RATINGS) {
             ratingFlow.refreshList(state);
         }
-    }
-
-    private static String resolveUsername(User user) {
-        String username = user.getUserName();
-        return (username == null || username.isBlank()) ? "id_" + user.getId() : username;
     }
 }

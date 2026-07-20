@@ -26,12 +26,12 @@ public final class ChatViewRepository {
         this.redis = redis;
     }
 
-    public void setState(long chatId, ChatState state, int messageId, String username) {
+    public void setState(long chatId, ChatState state, int messageId, long userId) {
         String key = chatViewKey(chatId);
         redis.hset(key, Map.of(
                 "state", state.name(),
                 "messageId", String.valueOf(messageId),
-                "username", username));
+                "userId", String.valueOf(userId)));
         redis.expire(key, VIEW_TTL_SECONDS);
     }
 
@@ -103,7 +103,7 @@ public final class ChatViewRepository {
                 chatId,
                 ChatState.valueOf(fields.get("state")),
                 Integer.parseInt(fields.get("messageId")),
-                fields.get("username"));
+                Long.parseLong(fields.get("userId")));
     }
 
     private static String chatViewKey(long chatId) {

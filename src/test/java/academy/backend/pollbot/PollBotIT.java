@@ -51,8 +51,8 @@ import static org.mockito.Mockito.mock;
 class PollBotIT {
 
     private static final String MEME_CODE = "test_meme";
-    private static final long ALICE_CHAT_ID = 1001L;
-    private static final long BOB_CHAT_ID = 1002L;
+    private static final long ALICE_ID = 1001L;
+    private static final long BOB_ID = 1002L;
 
     @Container
     private static final GenericContainer<?> REDIS =
@@ -65,6 +65,7 @@ class PollBotIT {
             MemeDefinition meme = new MemeDefinition(1, MEME_CODE, "Test meme", "memes/mem_pro_kotika.jpg",
                     "Test description", OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
             MemeManager memeManager = new MemeManager(new MemesConfig(List.of(meme)), Clock.systemUTC());
+            String memeToken = MemeManager.token(meme);
             Localization localization = new Localization(new LocalizationLoader().load());
 
             long ttlSeconds = Duration.ofDays(7).toSeconds();
@@ -80,27 +81,29 @@ class PollBotIT {
 
             // Both users start in the same poll batch.
             updateConsumer.consume(List.of(
-                    startUpdate(1, ALICE_CHAT_ID, "alice"),
-                    startUpdate(2, BOB_CHAT_ID, "bob")));
-            awaitTrue(() -> redisClient.exists("user:alice") && redisClient.exists("user:bob"));
+                    startUpdate(1, ALICE_ID),
+                    startUpdate(2, BOB_ID)));
+            awaitTrue(() -> redisClient.exists("user:" + ALICE_ID) && redisClient.exists("user:" + BOB_ID));
 
             // Each user's own three-step click sequence (open the list, open the meme, vote) has to
             // stay in order per chat, even though every step from both users is submitted together.
             updateConsumer.consume(List.of(
-                    callbackUpdate(3, ALICE_CHAT_ID, "alice", CallbackProtocol.MENU_VOTE),
-                    callbackUpdate(4, BOB_CHAT_ID, "bob", CallbackProtocol.MENU_VOTE),
-                    callbackUpdate(5, ALICE_CHAT_ID, "alice", CallbackProtocol.voteOpen(MEME_CODE)),
-                    callbackUpdate(6, BOB_CHAT_ID, "bob", CallbackProtocol.voteOpen(MEME_CODE)),
-                    callbackUpdate(7, ALICE_CHAT_ID, "alice", CallbackProtocol.voteRate(MEME_CODE, Rating.Z)),
-                    callbackUpdate(8, BOB_CHAT_ID, "bob", CallbackProtocol.voteRate(MEME_CODE, Rating.A))));
+                    callbackUpdate(3, ALICE_ID, CallbackProtocol.SHOW_VOTE_LIST),
+                    callbackUpdate(4, BOB_ID, CallbackProtocol.SHOW_VOTE_LIST),
+                    callbackUpdate(5, ALICE_ID, CallbackProtocol.openMemeForVote(memeToken)),
+                    callbackUpdate(6, BOB_ID, CallbackProtocol.openMemeForVote(memeToken)),
+                    callbackUpdate(7, ALICE_ID, CallbackProtocol.submitVote(memeToken, Rating.Z)),
+                    callbackUpdate(8, BOB_ID, CallbackProtocol.submitVote(memeToken, Rating.A))));
 
-            awaitTrue(() -> "Z".equals(redisClient.hget("user:alice:votes", MEME_CODE))
-                    && "A".equals(redisClient.hget("user:bob:votes", MEME_CODE)));
+            String aliceVotesKey = "user:" + ALICE_ID + ":votes";
+            String bobVotesKey = "user:" + BOB_ID + ":votes";
+            awaitTrue(() -> "Z".equals(redisClient.hget(aliceVotesKey, MEME_CODE))
+                    && "A".equals(redisClient.hget(bobVotesKey, MEME_CODE)));
 
             // Each user's vote landed under their own key, undisturbed by the other user's events
             // interleaved in the same batch.
-            assertEquals("Z", redisClient.hget("user:alice:votes", MEME_CODE));
-            assertEquals("A", redisClient.hget("user:bob:votes", MEME_CODE));
+            assertEquals("Z", redisClient.hget(aliceVotesKey, MEME_CODE));
+            assertEquals("A", redisClient.hget(bobVotesKey, MEME_CODE));
 
             Map<String, String> ratingCounts = redisClient.hgetAll("meme:" + MEME_CODE + ":rating");
             assertEquals("1", ratingCounts.get("Z"));
@@ -121,11 +124,11 @@ class PollBotIT {
         });
     }
 
-    private static Update startUpdate(int updateId, long chatId, String username) {
+    private static Update startUpdate(int updateId, long userId) {
         Message message = Message.builder()
                 .messageId(1)
-                .chat(Chat.builder().id(chatId).type("private").build())
-                .from(testUser(chatId, username))
+                .chat(Chat.builder().id(userId).type("private").build())
+                .from(testUser(userId))
                 .text("/start")
                 .date((int) (System.currentTimeMillis() / 1000))
                 .build();
@@ -135,14 +138,14 @@ class PollBotIT {
         return update;
     }
 
-    private static Update callbackUpdate(int updateId, long chatId, String username, String data) {
+    private static Update callbackUpdate(int updateId, long userId, String data) {
         Message contextMessage = Message.builder()
                 .messageId(1)
-                .chat(Chat.builder().id(chatId).type("private").build())
+                .chat(Chat.builder().id(userId).type("private").build())
                 .build();
         CallbackQuery callbackQuery = new CallbackQuery();
         callbackQuery.setId("cbq-" + updateId);
-        callbackQuery.setFrom(testUser(chatId, username));
+        callbackQuery.setFrom(testUser(userId));
         callbackQuery.setData(data);
         callbackQuery.setMessage(contextMessage);
         Update update = new Update();
@@ -151,8 +154,8 @@ class PollBotIT {
         return update;
     }
 
-    private static User testUser(long chatId, String username) {
-        return User.builder().id(chatId).userName(username).firstName(username).isBot(false).build();
+    private static User testUser(long userId) {
+        return User.builder().id(userId).firstName("Test").isBot(false).build();
     }
 
     private static void awaitTrue(BooleanSupplier condition) throws InterruptedException {

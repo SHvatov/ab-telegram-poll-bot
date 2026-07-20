@@ -7,19 +7,25 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ChatSequencer {
 
     private static final Duration IDLE_EVICTION = Duration.ofMinutes(15);
 
+    // Caps how many pending tasks a single chat can queue up, so one abusive or malfunctioning
+    // chat hammering the bot faster than it can be processed can't grow its mailbox without
+    // bound and exhaust memory. Once full, new tasks for that chat are dropped (and logged)
+    // rather than accepted.
+    private static final int MAX_MAILBOX_SIZE = 256;
+
     private final Cache<Long, ChatActor> actors = Caffeine.newBuilder()
             .expireAfterAccess(IDLE_EVICTION)
             .build();
 
     public void execute(long chatId, Runnable task) {
-        actors.get(chatId, id -> new ChatActor()).submit(task);
+        actors.get(chatId, id -> new ChatActor(id)).submit(task);
     }
 
     public void shutdown() {
@@ -32,11 +38,19 @@ public final class ChatSequencer {
         private static final int IDLE = 0;
         private static final int RUNNING = 1;
 
-        private final Queue<Runnable> mailbox = new ConcurrentLinkedQueue<>();
+        private final long chatId;
+        private final Queue<Runnable> mailbox = new LinkedBlockingQueue<>(MAX_MAILBOX_SIZE);
         private final AtomicInteger state = new AtomicInteger(IDLE);
 
+        ChatActor(long chatId) {
+            this.chatId = chatId;
+        }
+
         void submit(Runnable task) {
-            mailbox.offer(task);
+            if (!mailbox.offer(task)) {
+                log.warn("Mailbox full ({} pending) for chat {}, dropping task", MAX_MAILBOX_SIZE, chatId);
+                return;
+            }
             schedule();
         }
 

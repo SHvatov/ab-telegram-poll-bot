@@ -2,7 +2,7 @@
 # Placeholders use the {name} syntax and are substituted at render time.
 
 welcome:
-  greeting: "Привет, {username}! Добро пожаловать в бот для голосования и составления тир-листа мемов!"
+  greeting: "Привет! Добро пожаловать в бот для голосования и составления тир-листа мемов!"
 
 menu:
   title: "Главное меню"
@@ -51,3 +51,4 @@ rating:
 error:
   generic: "Что-то пошло не так, попробуйте ещё раз."
   meme-not-found: "Мем не найден."
+  unknown-command: "Неизвестная команда. Пользуйтесь кнопками меню ниже."

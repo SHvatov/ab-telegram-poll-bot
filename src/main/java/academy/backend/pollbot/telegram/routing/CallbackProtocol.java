@@ -4,62 +4,74 @@ import academy.backend.pollbot.domain.Rating;
 
 import java.util.Optional;
 
+/**
+ * Encodes/decodes the small string protocol carried in inline keyboard callback_data (Telegram
+ * caps this at 64 bytes). Every code below is an arbitrary short token, not a readable name for
+ * its action - callback_data is visible to whatever client sends it, so nothing here should hint
+ * at what a button does or which meme it targets. Meme references carry {@link
+ * academy.backend.pollbot.domain.MemeManager#token} rather than the meme's real code for the
+ * same reason.
+ */
 public final class CallbackProtocol {
 
-    public static final String MENU = "menu";
-    public static final String MENU_VOTE = "menu:vote";
-    public static final String MENU_RATING = "menu:rating";
-    public static final String MENU_MY_TIER = "menu:mytier";
-    public static final String MENU_GLOBAL_TIER = "menu:globaltier";
-    public static final String MENU_SOURCE = "menu:source";
-    public static final String VOTE_BACK = "vote:back";
-    public static final String RATING_BACK = "rating:back";
+    public static final String MAIN_MENU = "q7k";
+    public static final String SHOW_VOTE_LIST = "j2m";
+    public static final String SHOW_RATING_LIST = "t9p";
+    public static final String MY_TIER_LIST = "v4d";
+    public static final String GLOBAL_TIER_LIST = "h6s";
+    public static final String SOURCE = "n1w";
+    public static final String VOTE_LIST_BACK = "c8y";
+    public static final String RATING_LIST_BACK = "f3g";
 
-    private static final String VOTE_OPEN_PREFIX = "vote:open:";
-    private static final String RATING_OPEN_PREFIX = "rating:open:";
-    private static final String VOTE_RATE_PREFIX = "vote:rate:";
+    private static final String OPEN_MEME_FOR_VOTE_PREFIX = "z5r:";
+    private static final String OPEN_MEME_FOR_RATING_PREFIX = "k0b:";
+    private static final String SUBMIT_VOTE_PREFIX = "x7q:";
 
     private CallbackProtocol() {
     }
 
-    public static String voteOpen(String memeCode) {
-        return VOTE_OPEN_PREFIX + memeCode;
+    public static String openMemeForVote(String memeToken) {
+        return OPEN_MEME_FOR_VOTE_PREFIX + memeToken;
     }
 
-    public static String ratingOpen(String memeCode) {
-        return RATING_OPEN_PREFIX + memeCode;
+    public static String openMemeForRating(String memeToken) {
+        return OPEN_MEME_FOR_RATING_PREFIX + memeToken;
     }
 
-    public static String voteRate(String memeCode, Rating rating) {
-        return VOTE_RATE_PREFIX + memeCode + ":" + rating.name();
+    public static String submitVote(String memeToken, Rating rating) {
+        return SUBMIT_VOTE_PREFIX + memeToken + ":" + rating.name();
     }
 
-    public static Optional<String> parseVoteOpen(String data) {
-        return data.startsWith(VOTE_OPEN_PREFIX)
-                ? Optional.of(data.substring(VOTE_OPEN_PREFIX.length()))
+    public static Optional<String> parseOpenMemeForVote(String data) {
+        return data.startsWith(OPEN_MEME_FOR_VOTE_PREFIX)
+                ? Optional.of(data.substring(OPEN_MEME_FOR_VOTE_PREFIX.length()))
                 : Optional.empty();
     }
 
-    public static Optional<String> parseRatingOpen(String data) {
-        return data.startsWith(RATING_OPEN_PREFIX)
-                ? Optional.of(data.substring(RATING_OPEN_PREFIX.length()))
+    public static Optional<String> parseOpenMemeForRating(String data) {
+        return data.startsWith(OPEN_MEME_FOR_RATING_PREFIX)
+                ? Optional.of(data.substring(OPEN_MEME_FOR_RATING_PREFIX.length()))
                 : Optional.empty();
     }
 
-    public static Optional<VoteRate> parseVoteRate(String data) {
-        if (!data.startsWith(VOTE_RATE_PREFIX)) {
+    public static Optional<SubmitVote> parseSubmitVote(String data) {
+        if (!data.startsWith(SUBMIT_VOTE_PREFIX)) {
             return Optional.empty();
         }
-        String rest = data.substring(VOTE_RATE_PREFIX.length());
+        String rest = data.substring(SUBMIT_VOTE_PREFIX.length());
         int separator = rest.lastIndexOf(':');
         if (separator < 0) {
             return Optional.empty();
         }
-        String memeCode = rest.substring(0, separator);
-        Rating rating = Rating.valueOf(rest.substring(separator + 1));
-        return Optional.of(new VoteRate(memeCode, rating));
+        String memeToken = rest.substring(0, separator);
+        try {
+            Rating rating = Rating.valueOf(rest.substring(separator + 1));
+            return Optional.of(new SubmitVote(memeToken, rating));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
-    public record VoteRate(String memeCode, Rating rating) {
+    public record SubmitVote(String memeToken, Rating rating) {
     }
 }

@@ -29,6 +29,14 @@ jobs:
       - name: Build and verify
         run: mvn -B verify
 
+      - name: Scan dependencies for known CVEs
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
   publish:
     name: Publish image to GHCR
     needs: build

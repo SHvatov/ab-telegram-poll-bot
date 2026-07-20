@@ -34,11 +34,11 @@ public final class RatingFlow {
         this.chatViewRepository = chatViewRepository;
     }
 
-    public void showList(long chatId, String username) {
+    public void showList(long chatId, long userId) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         ScreenContent content = buildListContent();
         int messageId = gateway.renderText(chatId, previous, content.text(), content.keyboard());
-        setState(chatId, ChatState.WATCHING_MEME_RATINGS, messageId, username);
+        setState(chatId, ChatState.WATCHING_MEME_RATINGS, messageId, userId);
     }
 
     public void refreshList(CurrentChatState state) {
@@ -46,29 +46,29 @@ public final class RatingFlow {
         gateway.renderText(state.chatId(), state, content.text(), content.keyboard());
     }
 
-    public void openMeme(long chatId, String username, String memeCode) {
+    public void openMeme(long chatId, long userId, String memeToken) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        Optional<MemeDefinition> memeOpt = memeManager.findByCode(memeCode);
+        Optional<MemeDefinition> memeOpt = memeManager.findByToken(memeToken);
         if (memeOpt.isEmpty()) {
-            InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
+            InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
             int messageId = gateway.renderText(chatId, previous, localization.get("error.meme-not-found"), keyboard);
-            setState(chatId, ChatState.MENU, messageId, username);
+            setState(chatId, ChatState.MENU, messageId, userId);
             return;
         }
         MemeDefinition meme = memeOpt.get();
-        String globalRatingText = voteRepository.getGlobalRating(memeCode).map(Enum::name).orElse(localization.get("rating.none"));
+        String globalRatingText = voteRepository.getGlobalRating(meme.code()).map(Enum::name).orElse(localization.get("rating.none"));
         String caption = localization.get("rating.detail.caption",
                 Map.of("description", meme.description(), "globalRating", globalRatingText));
-        InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.RATING_BACK);
+        InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.RATING_LIST_BACK);
 
         int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-        setState(chatId, ChatState.WATCHING_MEME_RATING, messageId, username);
+        setState(chatId, ChatState.WATCHING_MEME_RATING, messageId, userId);
     }
 
     private ScreenContent buildListContent() {
         List<MemeDefinition> memes = memeManager.availableAsOf();
         if (memes.isEmpty()) {
-            InlineKeyboardMarkup backToMenu = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
+            InlineKeyboardMarkup backToMenu = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
             return new ScreenContent(localization.get("rating.list.empty"), backToMenu);
         }
         return new ScreenContent(localization.get("rating.list.title"), listKeyboard(memes));
@@ -77,9 +77,9 @@ public final class RatingFlow {
     private InlineKeyboardMarkup listKeyboard(List<MemeDefinition> memes) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (MemeDefinition meme : memes) {
-            rows.add(new InlineKeyboardRow(Keyboards.button(itemLabel(meme), CallbackProtocol.ratingOpen(meme.code()))));
+            rows.add(new InlineKeyboardRow(Keyboards.button(itemLabel(meme), CallbackProtocol.openMemeForRating(MemeManager.token(meme)))));
         }
-        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MENU)));
+        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU)));
         return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
@@ -92,8 +92,8 @@ public final class RatingFlow {
         return Keyboards.truncateButtonText(label);
     }
 
-    private void setState(long chatId, ChatState state, int messageId, String username) {
-        chatViewRepository.setState(chatId, state, messageId, username);
+    private void setState(long chatId, ChatState state, int messageId, long userId) {
+        chatViewRepository.setState(chatId, state, messageId, userId);
         if (state.isRefreshable()) {
             chatViewRepository.markAsRefreshable(chatId);
         } else {
