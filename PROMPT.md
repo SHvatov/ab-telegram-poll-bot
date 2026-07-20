@@ -74,4 +74,145 @@ memes:
   потоков, и далее выделяться по одному виртуальному потоку на запрос.
 
 --- 
+> Помоги со следующей задачей на Java:
+> Есть обычный newSingleThreadScheduledExecutor, который создает поток, который с заданной частотой получает обновления от
+> сервиса и дергает метод consume. Это библиотечный код, который я изменить не могу. В consume передается набор событий
+> множества пользователей. Я хочу обрабатывать их параллельно с помощью виртуальных потоков, однако главный вопрос - как
+> гарантировать последовательность обработки событий в разрезе пользователя?
 
+Это отличный и наиболее production-ready выбор. Использование Caffeine снимает с нас всю головную боль по ручному
+управлению памятью, оставляя код бизнес-логики чистым.
+
+Ниже собранный воедино, готовый к использованию класс. Для полноты картины я добавил интерфейс `Event`, чтобы код сразу
+компилировался.
+
+### Зависимость (Maven/Gradle)
+
+Если в проекте еще нет Caffeine, потребуется добавить зависимость:
+
+```xml
+
+<dependency>
+    <groupId>com.github.benmanes.caffeine</groupId>
+    <artifactId>caffeine</artifactId>
+    <version>3.1.8</version> <!-- Используй актуальную версию -->
+</dependency>
+
+```
+
+### Полный код решения
+
+```java
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
+// --- 1. Модель данных ---
+interface Event {
+    String getUserId();
+}
+
+// --- 2. Диспетчер событий ---
+public class EventDispatcher {
+
+    // Кэш автоматически удалит актора (и его пустую очередь), 
+    // если к нему не было обращений в течение 15 минут.
+    // Опционально можно добавить .maximumSize(10_000) для жесткой защиты от OOM.
+    private final Cache<String, UserActor> actors = Caffeine.newBuilder()
+            .expireAfterAccess(Duration.ofMinutes(15))
+            .build();
+
+    /**
+     * Метод, который дергает ScheduledExecutor.
+     * Отрабатывает максимально быстро (O(N) lock-free операций), не блокируя поток планировщика.
+     */
+    public void consume(List<Event> batch) {
+        for (Event event : batch) {
+            // cache.get потокобезопасен и блокирует вычисление только для одного ключа (userId)
+            actors.get(event.getUserId(), UserActor::new).submit(event);
+        }
+    }
+}
+
+// --- 3. Lock-free Актор ---
+class UserActor {
+    private final String userId;
+
+    // Неограниченная lock-free очередь. Память защищена тем, 
+    // что Caffeine удалит неактивные объекты.
+    private final Queue<Event> mailbox = new ConcurrentLinkedQueue<>();
+
+    // Состояние: 0 = IDLE (спит), 1 = RUNNING (поток запущен и читает очередь)
+    private final AtomicInteger state = new AtomicInteger(IDLE);
+
+    private static final int IDLE = 0;
+    private static final int RUNNING = 1;
+
+    public UserActor(String userId) {
+        this.userId = userId;
+    }
+
+    public void submit(Event event) {
+        // 1. Публикуем событие для виртуального потока (happens-before)
+        mailbox.offer(event);
+        // 2. Пытаемся запустить обработку
+        schedule();
+    }
+
+    private void schedule() {
+        // Переход из IDLE в RUNNING. Если уже RUNNING, значит 
+        // виртуальный поток прямо сейчас крутится в while-цикле и сам подхватит новое событие.
+        if (state.compareAndSet(IDLE, RUNNING)) {
+            Thread.startVirtualThread(this::processMailbox);
+        }
+    }
+
+    private void processMailbox() {
+        try {
+            Event event;
+            // Вычитываем очередь до дна
+            while ((event = mailbox.poll()) != null) {
+                try {
+                    processEvent(event);
+                } catch (Exception e) {
+                    // Критически важно: ловим исключения бизнес-логики, 
+                    // чтобы не прервать обработку остальных событий в очереди этого юзера.
+                    System.err.println("Error processing event for user " + userId + ": " + e.getMessage());
+                }
+            }
+        } finally {
+            // Очередь пуста. Сбрасываем флаг состояния.
+            state.set(IDLE);
+
+            // Double-checked locking для защиты от race condition.
+            // Проверяем, не успел ли поток из ScheduledExecutor добавить событие 
+            // между нашим последним poll() и state.set(IDLE).
+            if (!mailbox.isEmpty()) {
+                schedule();
+            }
+        }
+    }
+
+    private void processEvent(Event event) {
+        // Здесь выполняется тяжелая логика. Мы находимся в виртуальном потоке, 
+        // поэтому вызовы БД, HTTP-клиенты и Thread.sleep() здесь абсолютно бесплатны.
+        System.out.println("Processing event for " + event.getUserId() + " in " + Thread.currentThread());
+    }
+}
+
+```
+
+### Как это работает в связке
+
+1. **Мгновенный возврат:** Когда `ScheduledExecutor` вызывает `consume`, он лишь кладет события в очереди через
+   `ConcurrentLinkedQueue.offer` и обновляет время доступа в Caffeine. Блокировок нет, шедулер сразу свободен.
+2. **Гарантия порядка:** Очередь читает строго один виртуальный поток (благодаря `AtomicInteger`). Context switch'ей
+   между событиями одного пользователя нет.
+3. **Управление ресурсами:** Виртуальные потоки не висят в ожидании. Как только очередь пользователя пустеет, поток
+   завершается. Если пользователь не проявляет активности 15 минут, Caffeine собирает "мертвую" очередь и объект актора,
+   освобождая память. Если пользователь вернется через час, создастся новый актор с чистой историей.

@@ -1,0 +1,11 @@
+# ${VAR} is required (fails startup if unset); ${VAR:default} falls back to `default`.
+bot:
+  token: "${TELEGRAM_BOT_TOKEN}"
+
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  ttl-days: 7
+
+scheduler:
+  refresh-interval-seconds: 60
