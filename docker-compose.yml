@@ -3,18 +3,16 @@ services:
     image: valkey/valkey:8-alpine
     command: valkey-server --appendonly yes --save 60 1
     volumes:
-      - valkey-data:/data
+      - ${VALKEY_DATA_DIR:-./data/valkey}:/data
     restart: unless-stopped
 
   poll-bot:
-    build: .
+    image: ghcr.io/shvatov/ab-telegram-poll-bot:sha-33ffbfd
+    env_file:
+      - .env
     environment:
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       REDIS_HOST: valkey
       REDIS_PORT: 6379
     depends_on:
       - valkey
     restart: unless-stopped
-
-volumes:
-  valkey-data:
