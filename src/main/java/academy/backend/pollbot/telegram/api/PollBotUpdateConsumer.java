@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 
 import java.util.List;
 
@@ -35,9 +36,13 @@ public final class PollBotUpdateConsumer implements LongPollingUpdateConsumer {
         try {
             if (update.hasCallbackQuery()) {
                 botService.handleCallback(update.getCallbackQuery());
-            } else if (update.hasMessage() && update.getMessage().hasText()
-                    && update.getMessage().getText().startsWith("/start")) {
-                botService.handleStart(update.getMessage());
+            } else if (update.hasMessage()) {
+                Message message = update.getMessage();
+                if (message.hasText() && "/start".equals(message.getText())) {
+                    botService.handleStart(message);
+                } else {
+                    botService.handleUnknownMessage(message);
+                }
             }
         } catch (Exception e) {
             log.error("Unhandled error while processing update {}", update.getUpdateId(), e);

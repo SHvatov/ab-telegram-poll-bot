@@ -34,3 +34,7 @@ out/
 /.claude/
 *.xml
 *.iml
+
+# docker-compose local state
+.env
+/data/

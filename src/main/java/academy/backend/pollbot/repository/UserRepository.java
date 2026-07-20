@@ -19,17 +19,17 @@ public final class UserRepository {
         this.ttlSeconds = ttlSeconds;
     }
 
-    public boolean registerIfAbsent(String username) {
-        String result = redis.set(userKey(username), Instant.now().toString(),
+    public boolean registerIfAbsent(long userId) {
+        String result = redis.set(userKey(userId), Instant.now().toString(),
                 SetParams.setParams().nx().ex(ttlSeconds));
         boolean registered = "OK".equals(result);
         if (registered) {
-            log.info("Registered new user '{}'", username);
+            log.info("Registered new user {}", userId);
         }
         return registered;
     }
 
-    private static String userKey(String username) {
-        return "user:" + username;
+    private static String userKey(long userId) {
+        return "user:" + userId;
     }
 }

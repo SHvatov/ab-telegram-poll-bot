@@ -100,6 +100,9 @@ public final class TelegramGateway {
     }
 
     private int sendPhoto(long chatId, String resourcePath, String caption, InlineKeyboardMarkup keyboard) {
+        if (resourcePath.contains("..") || resourcePath.startsWith("/")) {
+            throw new IllegalArgumentException("Unsafe resource path: " + resourcePath);
+        }
         InputStream in = getClass().getResourceAsStream("/" + resourcePath);
         if (in == null) {
             throw new IllegalStateException("Meme image not found on classpath: " + resourcePath);

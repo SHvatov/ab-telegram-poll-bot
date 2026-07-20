@@ -38,25 +38,25 @@ public final class VoteRepository {
         this.ttlSeconds = ttlSeconds;
     }
 
-    public Optional<Rating> getUserVote(String username, String memeCode) {
-        String value = redis.hget(userVotesKey(username), memeCode);
+    public Optional<Rating> getUserVote(long userId, String memeCode) {
+        String value = redis.hget(userVotesKey(userId), memeCode);
         return value == null ? Optional.empty() : Optional.of(Rating.valueOf(value));
     }
 
-    public Map<String, Rating> getUserVotes(String username) {
-        return redis.hgetAll(userVotesKey(username)).entrySet().stream()
+    public Map<String, Rating> getUserVotes(long userId) {
+        return redis.hgetAll(userVotesKey(userId)).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> Rating.valueOf(e.getValue())));
     }
 
-    public boolean saveVoteIfAbsent(String username, String memeCode, Rating rating) {
+    public boolean saveVoteIfAbsent(long userId, String memeCode, Rating rating) {
         Object result = redis.eval(SAVE_VOTE_SCRIPT,
-                List.of(userVotesKey(username), memeRatingKey(memeCode)),
+                List.of(userVotesKey(userId), memeRatingKey(memeCode)),
                 List.of(memeCode, rating.name(), String.valueOf(ttlSeconds)));
         boolean saved = Objects.equals(result, 1L);
         if (saved) {
-            log.info("User '{}' voted '{}' for meme '{}'", username, rating, memeCode);
+            log.info("User {} voted '{}' for meme '{}'", userId, rating, memeCode);
         } else {
-            log.debug("User '{}' already voted for meme '{}', ignoring", username, memeCode);
+            log.debug("User {} already voted for meme '{}', ignoring", userId, memeCode);
         }
         return saved;
     }
@@ -73,8 +73,8 @@ public final class VoteRepository {
                 .map(Map.Entry::getKey);
     }
 
-    private static String userVotesKey(String username) {
-        return "user:" + username + ":votes";
+    private static String userVotesKey(long userId) {
+        return "user:" + userId + ":votes";
     }
 
     private static String memeRatingKey(String memeCode) {

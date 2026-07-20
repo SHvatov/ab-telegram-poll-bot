@@ -10,6 +10,8 @@ COPY src ./src
 RUN mvn -B -q package
 
 FROM eclipse-temurin:25-jre AS runtime
+RUN groupadd --system pollbot && useradd --system --no-create-home --gid pollbot pollbot
 WORKDIR /app
-COPY --from=builder /build/target/poll-bot-*.jar app.jar
+COPY --from=builder --chown=pollbot:pollbot /build/target/poll-bot-*.jar app.jar
+USER pollbot
 ENTRYPOINT ["java", "-jar", "app.jar"]

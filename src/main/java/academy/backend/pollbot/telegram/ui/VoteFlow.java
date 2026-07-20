@@ -35,27 +35,27 @@ public final class VoteFlow {
         this.chatViewRepository = chatViewRepository;
     }
 
-    public void showList(long chatId, String username) {
+    public void showList(long chatId, long userId) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        ScreenContent content = buildListContent(username);
+        ScreenContent content = buildListContent(userId);
         int messageId = gateway.renderText(chatId, previous, content.text(), content.keyboard());
-        setState(chatId, ChatState.CHOOSING_MEME, messageId, username);
+        setState(chatId, ChatState.CHOOSING_MEME, messageId, userId);
     }
 
     public void refreshList(CurrentChatState state) {
-        ScreenContent content = buildListContent(state.username());
+        ScreenContent content = buildListContent(state.userId());
         gateway.renderText(state.chatId(), state, content.text(), content.keyboard());
     }
 
-    public void openMeme(long chatId, String username, String memeCode) {
+    public void openMeme(long chatId, long userId, String memeToken) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        Optional<MemeDefinition> memeOpt = memeManager.findByCode(memeCode);
+        Optional<MemeDefinition> memeOpt = memeManager.findByToken(memeToken);
         if (memeOpt.isEmpty()) {
-            showError(chatId, previous, username, localization.get("error.meme-not-found"));
+            showError(chatId, previous, userId, localization.get("error.meme-not-found"));
             return;
         }
         MemeDefinition meme = memeOpt.get();
-        Optional<Rating> userVote = voteRepository.getUserVote(username, memeCode);
+        Optional<Rating> userVote = voteRepository.getUserVote(userId, meme.code());
 
         String caption;
         InlineKeyboardMarkup keyboard;
@@ -64,14 +64,14 @@ public final class VoteFlow {
             keyboard = backButtonKeyboard();
         } else {
             caption = localization.get("vote.detail.caption", Map.of("description", meme.description()));
-            keyboard = rateButtonsKeyboard(memeCode);
+            keyboard = rateButtonsKeyboard(memeToken);
         }
         int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-        setState(chatId, ChatState.RATING_MEME, messageId, username);
+        setState(chatId, ChatState.RATING_MEME, messageId, userId);
     }
 
-    public String submitVote(long chatId, String username, String memeCode, Rating rating) {
-        Optional<MemeDefinition> memeOpt = memeManager.findByCode(memeCode);
+    public String submitVote(long chatId, long userId, String memeToken, Rating rating) {
+        Optional<MemeDefinition> memeOpt = memeManager.findByToken(memeToken);
         if (memeOpt.isEmpty()) {
             return localization.get("error.meme-not-found");
         }
@@ -79,7 +79,7 @@ public final class VoteFlow {
         if (!memeManager.isAvailable(meme)) {
             return localization.get("vote.unavailable-alert");
         }
-        if (!voteRepository.saveVoteIfAbsent(username, memeCode, rating)) {
+        if (!voteRepository.saveVoteIfAbsent(userId, meme.code(), rating)) {
             return localization.get("vote.already-voted-alert");
         }
 
@@ -89,26 +89,26 @@ public final class VoteFlow {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         if (previous != null && previous.state() == ChatState.RATING_MEME) {
             gateway.updatePhotoCaption(chatId, previous.messageId(), caption, keyboard);
-            setState(chatId, ChatState.RATING_MEME, previous.messageId(), username);
+            setState(chatId, ChatState.RATING_MEME, previous.messageId(), userId);
         } else {
             int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);
-            setState(chatId, ChatState.RATING_MEME, messageId, username);
+            setState(chatId, ChatState.RATING_MEME, messageId, userId);
         }
         return localization.get("vote.saved-alert");
     }
 
-    private void showError(long chatId, CurrentChatState previous, String username, String message) {
-        InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
+    private void showError(long chatId, CurrentChatState previous, long userId, String message) {
+        InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
         int messageId = gateway.renderText(chatId, previous, message, keyboard);
-        setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, userId);
     }
 
-    private ScreenContent buildListContent(String username) {
+    private ScreenContent buildListContent(long userId) {
         List<MemeDefinition> memes = memeManager.availableAsOf();
         if (memes.isEmpty()) {
             return new ScreenContent(localization.get("vote.list.empty"), backToMenuKeyboard());
         }
-        Map<String, Rating> userVotes = voteRepository.getUserVotes(username);
+        Map<String, Rating> userVotes = voteRepository.getUserVotes(userId);
         return new ScreenContent(localization.get("vote.list.title"), listKeyboard(memes, userVotes));
     }
 
@@ -116,28 +116,28 @@ public final class VoteFlow {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (MemeDefinition meme : memes) {
             String label = itemLabel(meme, Optional.ofNullable(userVotes.get(meme.code())));
-            rows.add(new InlineKeyboardRow(Keyboards.button(label, CallbackProtocol.voteOpen(meme.code()))));
+            rows.add(new InlineKeyboardRow(Keyboards.button(label, CallbackProtocol.openMemeForVote(MemeManager.token(meme)))));
         }
-        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MENU)));
+        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU)));
         return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
-    private InlineKeyboardMarkup rateButtonsKeyboard(String memeCode) {
+    private InlineKeyboardMarkup rateButtonsKeyboard(String memeToken) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (Rating rating : Rating.values()) {
             String label = localization.get("vote.rate.button." + rating.name().toLowerCase());
-            rows.add(new InlineKeyboardRow(Keyboards.button(label, CallbackProtocol.voteRate(memeCode, rating))));
+            rows.add(new InlineKeyboardRow(Keyboards.button(label, CallbackProtocol.submitVote(memeToken, rating))));
         }
-        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("vote.rate.button.back"), CallbackProtocol.VOTE_BACK)));
+        rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("vote.rate.button.back"), CallbackProtocol.VOTE_LIST_BACK)));
         return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
     private InlineKeyboardMarkup backButtonKeyboard() {
-        return Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.VOTE_BACK);
+        return Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.VOTE_LIST_BACK);
     }
 
     private InlineKeyboardMarkup backToMenuKeyboard() {
-        return Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MENU);
+        return Keyboards.singleButtonKeyboard(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
     }
 
     private String alreadyVotedCaption(MemeDefinition meme, Rating rating) {
@@ -161,8 +161,8 @@ public final class VoteFlow {
         return Keyboards.truncateButtonText(label);
     }
 
-    private void setState(long chatId, ChatState state, int messageId, String username) {
-        chatViewRepository.setState(chatId, state, messageId, username);
+    private void setState(long chatId, ChatState state, int messageId, long userId) {
+        chatViewRepository.setState(chatId, state, messageId, userId);
         if (state.isRefreshable()) {
             chatViewRepository.markAsRefreshable(chatId);
         } else {

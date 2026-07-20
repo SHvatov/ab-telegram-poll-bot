@@ -10,7 +10,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
 import java.util.List;
-import java.util.Map;
 
 public final class MenuFlow {
 
@@ -26,53 +25,57 @@ public final class MenuFlow {
         this.chatViewRepository = chatViewRepository;
     }
 
-    public void showMainMenu(long chatId, String username) {
-        render(chatId, username, localization.get("menu.title"));
+    public void showMainMenu(long chatId, long userId) {
+        render(chatId, userId, localization.get("menu.title"));
     }
 
-    public void showMainMenuWithGreeting(long chatId, String username) {
-        String text = localization.get("welcome.greeting", Map.of("username", username))
-                + "\n\n" + localization.get("menu.title");
-        render(chatId, username, text);
+    public void showMainMenuWithGreeting(long chatId, long userId) {
+        String text = localization.get("welcome.greeting") + "\n\n" + localization.get("menu.title");
+        render(chatId, userId, text);
     }
 
-    private void render(long chatId, String username, String text) {
+    public void showUnknownCommand(long chatId, long userId) {
+        String text = localization.get("error.unknown-command") + "\n\n" + localization.get("menu.title");
+        render(chatId, userId, text);
+    }
+
+    private void render(long chatId, long userId, String text) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard());
-        setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, userId);
     }
 
-    public void showNotImplemented(long chatId, String username) {
+    public void showNotImplemented(long chatId, long userId) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(
-                localization.get("menu.button.back"), CallbackProtocol.MENU);
+                localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
         int messageId = gateway.renderText(chatId, previous, localization.get("menu.not-implemented"), keyboard);
-        setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, userId);
     }
 
-    public void showSource(long chatId, String username) {
+    public void showSource(long chatId, long userId) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder().keyboard(List.of(
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MENU)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU)),
                 new InlineKeyboardRow(Keyboards.urlButton(localization.get("menu.button.source"), SOURCE_REPOSITORY_URL))
         )).build();
         int messageId = gateway.renderText(chatId, previous, localization.get("menu.source.text"), keyboard);
-        setState(chatId, ChatState.MENU, messageId, username);
+        setState(chatId, ChatState.MENU, messageId, userId);
     }
 
     private InlineKeyboardMarkup mainMenuKeyboard() {
         return InlineKeyboardMarkup.builder().keyboard(List.of(
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.vote"), CallbackProtocol.MENU_VOTE)),
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.rating"), CallbackProtocol.MENU_RATING)),
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.my-tier-list"), CallbackProtocol.MENU_MY_TIER)),
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.MENU_GLOBAL_TIER)),
-                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.source"), CallbackProtocol.MENU_SOURCE))
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.vote"), CallbackProtocol.SHOW_VOTE_LIST)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.rating"), CallbackProtocol.SHOW_RATING_LIST)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.my-tier-list"), CallbackProtocol.MY_TIER_LIST)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.GLOBAL_TIER_LIST)),
+                new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.source"), CallbackProtocol.SOURCE))
         )).build();
     }
 
     /** Persists the screen and decides whether it belongs in the scheduler's refresh set. */
-    private void setState(long chatId, ChatState state, int messageId, String username) {
-        chatViewRepository.setState(chatId, state, messageId, username);
+    private void setState(long chatId, ChatState state, int messageId, long userId) {
+        chatViewRepository.setState(chatId, state, messageId, userId);
         if (state.isRefreshable()) {
             chatViewRepository.markAsRefreshable(chatId);
         } else {
