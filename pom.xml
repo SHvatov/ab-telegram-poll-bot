@@ -19,7 +19,7 @@
         <jackson.version>2.22.1</jackson.version>
         <jackson-dataformat-properties.version>2.22.0</jackson-dataformat-properties.version>
         <jedis.version>7.4.0</jedis.version>
-        <logback.version>1.5.38</logback.version>
+        <logback.version>1.6.0</logback.version>
         <caffeine.version>3.2.4</caffeine.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
