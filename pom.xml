@@ -15,7 +15,7 @@
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <telegrambots.version>10.0.0</telegrambots.version>
+        <telegrambots.version>10.1.1</telegrambots.version>
         <jackson.version>2.22.1</jackson.version>
         <jackson-dataformat-properties.version>2.22.0</jackson-dataformat-properties.version>
         <jedis.version>7.4.0</jedis.version>
