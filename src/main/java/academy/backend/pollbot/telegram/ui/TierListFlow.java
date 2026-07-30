@@ -29,7 +29,7 @@ public final class TierListFlow {
     private static final Logger log = LoggerFactory.getLogger(TierListFlow.class);
 
     // One tier-list generation per user per 5 minutes (enforced in Redis, so it holds across restarts).
-    private static final long RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
+    private static final long RATE_LIMIT_WINDOW_SECONDS = 60;
 
     private final TelegramGateway gateway;
     private final Localization localization;
