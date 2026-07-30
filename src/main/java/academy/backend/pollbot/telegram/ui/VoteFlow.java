@@ -150,13 +150,11 @@ public final class VoteFlow {
                 .map(Enum::name).orElse(localization.get("rating.none"));
         String label = userVote.isPresent()
                 ? localization.get("vote.list.item.voted", Map.of(
-                        "position", meme.position(),
-                        "description", meme.description(),
+                        "name", meme.name(),
                         "rating", userVote.get().name(),
                         "globalRating", globalRatingText))
                 : localization.get("vote.list.item.unvoted", Map.of(
-                        "position", meme.position(),
-                        "description", meme.description(),
+                        "name", meme.name(),
                         "globalRating", globalRatingText));
         return Keyboards.truncateButtonText(label);
     }

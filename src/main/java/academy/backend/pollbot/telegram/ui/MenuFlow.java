@@ -29,9 +29,15 @@ public final class MenuFlow {
         render(chatId, userId, localization.get("menu.title"));
     }
 
+    /**
+     * Shown on /start: always re-posts the greeting + menu as a brand-new message (deleting any
+     * previous view), so /start reliably brings the user back to a fresh main menu.
+     */
     public void showMainMenuWithGreeting(long chatId, long userId) {
         String text = localization.get("welcome.greeting") + "\n\n" + localization.get("menu.title");
-        render(chatId, userId, text);
+        CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
+        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard());
+        setState(chatId, ChatState.MENU, messageId, userId);
     }
 
     public void showUnknownCommand(long chatId, long userId) {
