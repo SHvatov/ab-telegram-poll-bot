@@ -86,8 +86,7 @@ public final class RatingFlow {
     private String itemLabel(MemeDefinition meme) {
         String globalRatingText = voteRepository.getGlobalRating(meme.code()).map(Enum::name).orElse(localization.get("rating.none"));
         String label = localization.get("rating.list.item", Map.of(
-                "position", meme.position(),
-                "description", meme.description(),
+                "name", meme.name(),
                 "globalRating", globalRatingText));
         return Keyboards.truncateButtonText(label);
     }
