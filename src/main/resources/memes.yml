@@ -39,133 +39,133 @@ memes:
     description: "Кефирные грибки в чате ставят лайк!"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: X
+  - position: 6
     code: "very_continious_integration"
     name: "Пайпы крутятся, лавэха мутится"
-    path: "memes/very_continious_integration.jpg"
+    path: "memes/very_continious_integration.png"
     description: "Олды в зале пустили скупую мужскую слезу..."
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 6
+  - position: 7
     code: "split_personality"
     name: "Мечта любого тимлида!"
     path: "memes/split_personality.jpg"
     description: ":fyi: Если что, Шьямалан снял фильм Сплит, где у ГГ - 21 личность"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 7
+  - position: 8
     code: "refactor_101"
     name: "POV: ваша первая рабочая задача"
     path: "memes/refactor_6061.jpg"
     description: "Индусский код би лайк"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: X
+  - position: 9
     code: "oop"
     name: "Overengineered Oriented Programming"
-    path: "memes/oop.jpg"
+    path: "memes/oop_chaos.png"
     description: "Cat extends AbstractAnimal implements NotFlyingAnimal..."
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 8
+  - position: 10
     code: "clickbait_bugs"
     name: "Average Backend Bug be like #1"
     path: "memes/clickbait_bugs.png"
     description: "99% разработчиков не могут оценить этот мем как S-tier"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 9
+  - position: 11
     code: "back_front_bugs"
     name: "Average Backend Bug be like #2"
     path: "memes/back_front_bugs.jpg"
     description: "Жесткие баги на бэке vs няшные и милые баги на фронте"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 10
+  - position: 12
     code: "qa_bar"
     name: "Average тестировщик be like"
     path: "memes/qa_bar.png"
     description: "Заходит как-то QA-инженер в бар, а там разработчик заказывает 128-ю Голубую Лагуну..."
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 11
+  - position: 13
     code: "legacy_microservices"
     name: "Микро-мем про Микро-севрисы #1"
     path: "memes/legacy_microservices.jpg"
     description: "Съешь ещё этих мягких французских булок, да выпей чаю"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: X
+  - position: 14
     code: "minimonolith-vs-micorservice"
     name: "Микро-мем про Микро-севрисы #2"
-    path: "memes/minimonolith.jpg"
-    description: "Это микросервис? Это монолит? Нет, это *****-код!"
+    path: "memes/shreked.png"
+    description: "*Щелк*\nИщите себя в фотографиях с мероприятия!"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: X
+  - position: 15
     code: "micorservice-pain"
     name: "Микро-мем про Микро-севрисы #3"
-    path: "memes/micorservice_pain.jpg"
+    path: "memes/micorservice_pain.png"
     description: "Pain... What do you know about pain?"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 12
+  - position: 16
     code: "junior_2025"
     name: "Среднестатистический Junior в 2026"
     path: "memes/junior_2025.jpg"
     description: "Джун согласно описаниям вакансий в 2026 году"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 13
+  - position: 17
     code: "job_req_2026"
     name: "Учите System Design"
     path: "memes/job_req_2026.jpg"
     description: "Учите System Design, он вам пригодится по жизни!"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 14
+  - position: 18
     code: "horse_tractor"
     name: "ИИ лошади нас всех заменят!"
     path: "memes/horse_tractor.jpg"
     description: "Сначала сферические кони, теперь ИИ лошади - дальше что?"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 15
+  - position: 19
     code: "intern_to_beekeeper"
     name: "От стажера до пасечника – рукой подать"
     path: "memes/intern_to_beekeeper.jpg"
     description: "Все мы с вами когда-нибудь окажемся на пасеке..."
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 16
+  - position: 20
     code: "algo_interview"
     name: "Среднестатистическая задача на алго-собесе"
     path: "memes/algo_interview.png"
     description: "Вы? Ты? Я? Мы?"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 17
+  - position: 21
     code: "lucky_cat"
     name: "Заряжаемся успехом перед собеседованием!"
     path: "memes/lucky_cat.jpg"
     description: "Потри кота за лапки, чтобы были бабки!"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 18
+  - position: 22
     code: "prompt_engineer"
     name: "PrOmPt EngInEEr"
     path: "memes/prompt_engineer.png"
     description: "Claude, please, do not make mistakes!"
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 19
+  - position: 23
     code: "chatgpt_right"
     name: "ChatGPT be like…"
     path: "memes/chatgpt_right.jpg"
     description: "Как языковая модель искусственного интеллекта, я проанализировал данное изображение и пришел к выводу, что его комический эффект строится на абсурдном применении моего стандартного текстового паттерна — мгновенного признания ошибки и предложения сгенерировать ответ заново — к ситуации реального хирургического вмешательства, где функция «отмены» физически невозможна."
     available-after: 2025-01-01T00:00:00.00+03:00
 
-  - position: 20
+  - position: 24
     code: "potyanesh"
     name: "Потянешь?"
     path: "memes/potyanesh.jpg"
