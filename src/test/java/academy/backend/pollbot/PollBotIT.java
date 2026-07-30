@@ -8,11 +8,13 @@ import academy.backend.pollbot.domain.MemeDefinition;
 import academy.backend.pollbot.domain.MemeManager;
 import academy.backend.pollbot.domain.Rating;
 import academy.backend.pollbot.repository.ChatViewRepository;
+import academy.backend.pollbot.repository.RateLimitRepository;
 import academy.backend.pollbot.repository.UserRepository;
 import academy.backend.pollbot.repository.VoteRepository;
 import academy.backend.pollbot.telegram.api.PollBotUpdateConsumer;
 import academy.backend.pollbot.telegram.routing.BotService;
 import academy.backend.pollbot.telegram.routing.CallbackProtocol;
+import academy.backend.pollbot.tierlist.TierListGenerator;
 import org.junit.jupiter.api.Test;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -72,11 +74,14 @@ class PollBotIT {
             UserRepository userRepository = new UserRepository(redisClient, ttlSeconds);
             VoteRepository voteRepository = new VoteRepository(redisClient, ttlSeconds);
             ChatViewRepository chatViewRepository = new ChatViewRepository(redisClient);
+            RateLimitRepository rateLimitRepository = new RateLimitRepository(redisClient);
 
             TelegramClient telegramClient = fakeTelegramClient();
-            BotService botService = BotService.create(
-                    telegramClient, memeManager, localization, userRepository, voteRepository, chatViewRepository);
             ChatSequencer chatSequencer = new ChatSequencer();
+            TierListGenerator tierListGenerator = new TierListGenerator();
+            BotService botService = BotService.create(
+                    telegramClient, memeManager, localization, userRepository, voteRepository, chatViewRepository,
+                    rateLimitRepository, tierListGenerator, chatSequencer);
             PollBotUpdateConsumer updateConsumer = new PollBotUpdateConsumer(chatSequencer, botService);
 
             // Both users start in the same poll batch.
@@ -92,21 +97,21 @@ class PollBotIT {
                     callbackUpdate(4, BOB_ID, CallbackProtocol.SHOW_VOTE_LIST),
                     callbackUpdate(5, ALICE_ID, CallbackProtocol.openMemeForVote(memeToken)),
                     callbackUpdate(6, BOB_ID, CallbackProtocol.openMemeForVote(memeToken)),
-                    callbackUpdate(7, ALICE_ID, CallbackProtocol.submitVote(memeToken, Rating.Z)),
+                    callbackUpdate(7, ALICE_ID, CallbackProtocol.submitVote(memeToken, Rating.S)),
                     callbackUpdate(8, BOB_ID, CallbackProtocol.submitVote(memeToken, Rating.A))));
 
             String aliceVotesKey = "user:" + ALICE_ID + ":votes";
             String bobVotesKey = "user:" + BOB_ID + ":votes";
-            awaitTrue(() -> "Z".equals(redisClient.hget(aliceVotesKey, MEME_CODE))
+            awaitTrue(() -> "S".equals(redisClient.hget(aliceVotesKey, MEME_CODE))
                     && "A".equals(redisClient.hget(bobVotesKey, MEME_CODE)));
 
             // Each user's vote landed under their own key, undisturbed by the other user's events
             // interleaved in the same batch.
-            assertEquals("Z", redisClient.hget(aliceVotesKey, MEME_CODE));
+            assertEquals("S", redisClient.hget(aliceVotesKey, MEME_CODE));
             assertEquals("A", redisClient.hget(bobVotesKey, MEME_CODE));
 
             Map<String, String> ratingCounts = redisClient.hgetAll("meme:" + MEME_CODE + ":rating");
-            assertEquals("1", ratingCounts.get("Z"));
+            assertEquals("1", ratingCounts.get("S"));
             assertEquals("1", ratingCounts.get("A"));
         } finally {
             redisClient.close();

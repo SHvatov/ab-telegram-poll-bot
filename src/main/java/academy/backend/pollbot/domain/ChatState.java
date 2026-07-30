@@ -10,7 +10,9 @@ public enum ChatState {
 
     WATCHING_MEME_RATINGS(true, true),
 
-    WATCHING_MEME_RATING(false, false);
+    WATCHING_MEME_RATING(false, false),
+
+    VIEWING_TIER_LIST(false, false);
 
     private final boolean text;
     private final boolean refreshable;

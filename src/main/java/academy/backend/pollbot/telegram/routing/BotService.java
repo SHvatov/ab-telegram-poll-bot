@@ -1,16 +1,21 @@
 package academy.backend.pollbot.telegram.routing;
 
 import academy.backend.pollbot.config.i18n.Localization;
+import academy.backend.pollbot.core.concurrency.ChatSequencer;
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeManager;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
+import academy.backend.pollbot.repository.RateLimitRepository;
 import academy.backend.pollbot.repository.UserRepository;
 import academy.backend.pollbot.repository.VoteRepository;
 import academy.backend.pollbot.telegram.api.TelegramGateway;
 import academy.backend.pollbot.telegram.ui.MenuFlow;
 import academy.backend.pollbot.telegram.ui.RatingFlow;
+import academy.backend.pollbot.telegram.ui.TierListFlow;
 import academy.backend.pollbot.telegram.ui.VoteFlow;
+import academy.backend.pollbot.tierlist.TierListGenerator;
+import academy.backend.pollbot.tierlist.TierListImageRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -29,25 +34,30 @@ public final class BotService {
     private final MenuFlow menuFlow;
     private final VoteFlow voteFlow;
     private final RatingFlow ratingFlow;
+    private final TierListFlow tierListFlow;
 
     private BotService(TelegramGateway gateway, UserRepository userRepository, Localization localization,
-                        MenuFlow menuFlow, VoteFlow voteFlow, RatingFlow ratingFlow) {
+                        MenuFlow menuFlow, VoteFlow voteFlow, RatingFlow ratingFlow, TierListFlow tierListFlow) {
         this.gateway = gateway;
         this.userRepository = userRepository;
         this.localization = localization;
         this.menuFlow = menuFlow;
         this.voteFlow = voteFlow;
         this.ratingFlow = ratingFlow;
+        this.tierListFlow = tierListFlow;
     }
 
     public static BotService create(TelegramClient telegramClient, MemeManager memeManager, Localization localization,
                                      UserRepository userRepository, VoteRepository voteRepository,
-                                     ChatViewRepository chatViewRepository) {
+                                     ChatViewRepository chatViewRepository, RateLimitRepository rateLimitRepository,
+                                     TierListGenerator tierListGenerator, ChatSequencer chatSequencer) {
         TelegramGateway gateway = new TelegramGateway(telegramClient);
         MenuFlow menuFlow = new MenuFlow(gateway, localization, chatViewRepository);
         VoteFlow voteFlow = new VoteFlow(gateway, localization, memeManager, voteRepository, chatViewRepository);
         RatingFlow ratingFlow = new RatingFlow(gateway, localization, memeManager, voteRepository, chatViewRepository);
-        return new BotService(gateway, userRepository, localization, menuFlow, voteFlow, ratingFlow);
+        TierListFlow tierListFlow = new TierListFlow(gateway, localization, memeManager, voteRepository,
+                chatViewRepository, rateLimitRepository, tierListGenerator, new TierListImageRenderer(), chatSequencer);
+        return new BotService(gateway, userRepository, localization, menuFlow, voteFlow, ratingFlow, tierListFlow);
     }
 
     public void handleStart(Message message) {
@@ -56,11 +66,19 @@ public final class BotService {
         menuFlow.showMainMenuWithGreeting(message.getChatId(), userId);
     }
 
-    /** Any message that isn't a recognized command - the bot is button-driven, so this always gets a visible reply. */
+    /**
+     * Any message that isn't a recognized command. The bot is button-driven, so it removes the
+     * user's stray message and re-posts the menu as a fresh message.
+     */
     public void handleUnknownMessage(Message message) {
         long userId = message.getFrom().getId();
         userRepository.registerIfAbsent(userId);
-        menuFlow.showUnknownCommand(message.getChatId(), userId);
+        menuFlow.showUnknownCommandFresh(message.getChatId(), userId, message.getMessageId());
+    }
+
+    /** Bounces an idle session back to the main menu (invoked by the idle-session sweeper). */
+    public void resetToMenu(CurrentChatState state) {
+        menuFlow.showMainMenu(state.chatId(), state.userId());
     }
 
     public void handleCallback(CallbackQuery query) {
@@ -91,8 +109,10 @@ public final class BotService {
             voteFlow.showList(chatId, userId);
         } else if (CallbackProtocol.SHOW_RATING_LIST.equals(data)) {
             ratingFlow.showList(chatId, userId);
-        } else if (CallbackProtocol.MY_TIER_LIST.equals(data) || CallbackProtocol.GLOBAL_TIER_LIST.equals(data)) {
-            menuFlow.showNotImplemented(chatId, userId);
+        } else if (CallbackProtocol.MY_TIER_LIST.equals(data)) {
+            return tierListFlow.request(chatId, userId, true);
+        } else if (CallbackProtocol.GLOBAL_TIER_LIST.equals(data)) {
+            return tierListFlow.request(chatId, userId, false);
         } else if (CallbackProtocol.SOURCE.equals(data)) {
             menuFlow.showSource(chatId, userId);
         } else if (CallbackProtocol.VOTE_LIST_BACK.equals(data)) {

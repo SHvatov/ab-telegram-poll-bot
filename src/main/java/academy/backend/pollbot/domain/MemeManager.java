@@ -29,6 +29,10 @@ public final class MemeManager {
         return memes.size();
     }
 
+    public List<MemeDefinition> all() {
+        return memes;
+    }
+
     /**
      * The opaque, non-reversible-at-a-glance reference to a meme used in Telegram callback_data,
      * so button payloads never expose the meme's real (human-readable) code. Stable across
