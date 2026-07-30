@@ -13,10 +13,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public final class ChatViewRepository {
 
     private static final String REFRESHABLE_SET_KEY = "chatview:refreshable";
+
+    // Sorted set of chatId -> last-activity epoch millis, but only for chats sitting in a non-MENU
+    // state. The idle sweeper reads it to find sessions to bounce back to the menu; a chat that
+    // reaches MENU (its resting state) is dropped, since there's nothing to time out from there.
+    private static final String ACTIVITY_ZSET_KEY = "chatview:activity";
 
     private static final long VIEW_TTL_SECONDS = 60 * 60;
 
@@ -33,6 +39,11 @@ public final class ChatViewRepository {
                 "messageId", String.valueOf(messageId),
                 "userId", String.valueOf(userId)));
         redis.expire(key, VIEW_TTL_SECONDS);
+        if (state == ChatState.MENU) {
+            redis.zrem(ACTIVITY_ZSET_KEY, String.valueOf(chatId));
+        } else {
+            redis.zadd(ACTIVITY_ZSET_KEY, System.currentTimeMillis(), String.valueOf(chatId));
+        }
     }
 
     public void markAsRefreshable(long chatId) {
@@ -63,12 +74,23 @@ public final class ChatViewRepository {
         do {
             ScanResult<String> scanResult = redis.sscan(REFRESHABLE_SET_KEY, cursor, params);
             cursor = scanResult.getCursor();
-            result.addAll(fetchStates(scanResult.getResult()));
+            result.addAll(fetchStates(scanResult.getResult(),
+                    stale -> redis.srem(REFRESHABLE_SET_KEY, stale)));
         } while (!ScanParams.SCAN_POINTER_START.equals(cursor));
         return result;
     }
 
-    private List<CurrentChatState> fetchStates(List<String> chatIdStrs) {
+    /**
+     * Returns the chat states that have been sitting in a non-MENU state, untouched, for at least
+     * {@code idleMillis} - the sessions the idle sweeper should bounce back to the menu.
+     */
+    public List<CurrentChatState> listIdleStates(long idleMillis) {
+        double cutoff = System.currentTimeMillis() - idleMillis;
+        List<String> chatIds = redis.zrangeByScore(ACTIVITY_ZSET_KEY, 0, cutoff);
+        return fetchStates(chatIds, stale -> redis.zrem(ACTIVITY_ZSET_KEY, stale));
+    }
+
+    private List<CurrentChatState> fetchStates(List<String> chatIdStrs, Consumer<String[]> prune) {
         if (chatIdStrs.isEmpty()) {
             return List.of();
         }
@@ -93,7 +115,7 @@ public final class ChatViewRepository {
             result.add(toState(Long.parseLong(entry.getKey()), fields));
         }
         if (!stale.isEmpty()) {
-            redis.srem(REFRESHABLE_SET_KEY, stale.toArray(new String[0]));
+            prune.accept(stale.toArray(new String[0]));
         }
         return result;
     }

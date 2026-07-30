@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -50,6 +51,37 @@ public final class TelegramGateway {
             deleteQuietly(chatId, previous.messageId());
         }
         return sendPhoto(chatId, resourcePath, caption, keyboard);
+    }
+
+    /** Sends an in-memory image (e.g. a generated tier list) as a fresh photo, replacing any previous view. */
+    public int renderPhotoBytes(long chatId, CurrentChatState previous, byte[] photo, String fileName,
+                                 String caption, InlineKeyboardMarkup keyboard) {
+        if (previous != null) {
+            deleteQuietly(chatId, previous.messageId());
+        }
+        SendPhoto method = SendPhoto.builder()
+                .chatId(chatId)
+                .photo(new InputFile(new ByteArrayInputStream(photo), fileName))
+                .caption(caption)
+                .replyMarkup(keyboard)
+                .build();
+        try {
+            return telegramClient.execute(method).getMessageId();
+        } catch (TelegramApiException e) {
+            throw new BotOperationException("Failed to send generated photo to chat " + chatId, e);
+        }
+    }
+
+    /** Always deletes the previous view (if any) and sends a brand-new message, never an in-place edit. */
+    public int renderFreshText(long chatId, CurrentChatState previous, String text, InlineKeyboardMarkup keyboard) {
+        if (previous != null) {
+            deleteQuietly(chatId, previous.messageId());
+        }
+        return sendText(chatId, text, keyboard);
+    }
+
+    public void deleteMessage(long chatId, int messageId) {
+        deleteQuietly(chatId, messageId);
     }
 
     public void updatePhotoCaption(long chatId, int messageId, String caption, InlineKeyboardMarkup keyboard) {

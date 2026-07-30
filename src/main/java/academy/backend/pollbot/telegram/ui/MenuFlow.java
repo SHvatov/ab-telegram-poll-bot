@@ -39,17 +39,22 @@ public final class MenuFlow {
         render(chatId, userId, text);
     }
 
-    private void render(long chatId, long userId, String text) {
+    /**
+     * Handles an unrecognized free-text message: removes the user's own message from the chat and
+     * re-posts the menu as a brand-new message (rather than editing in place), so the menu always
+     * ends up at the bottom of the conversation.
+     */
+    public void showUnknownCommandFresh(long chatId, long userId, int incomingMessageId) {
+        gateway.deleteMessage(chatId, incomingMessageId);
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard());
+        String text = localization.get("error.unknown-command") + "\n\n" + localization.get("menu.title");
+        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard());
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 
-    public void showNotImplemented(long chatId, long userId) {
+    private void render(long chatId, long userId, String text) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(
-                localization.get("menu.button.back"), CallbackProtocol.MAIN_MENU);
-        int messageId = gateway.renderText(chatId, previous, localization.get("menu.not-implemented"), keyboard);
+        int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard());
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 

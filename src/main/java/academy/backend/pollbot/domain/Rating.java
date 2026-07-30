@@ -1,7 +1,7 @@
 package academy.backend.pollbot.domain;
 
 public enum Rating {
-    Z(0),
+    S(0),
     A(1),
     B(2),
     C(3),

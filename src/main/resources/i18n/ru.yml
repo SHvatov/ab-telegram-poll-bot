@@ -13,7 +13,6 @@ menu:
     global-tier-list: "Сгенерировать глобальный тиер-лист"
     source: "Исходники"
     back: "◀️ Главное меню"
-  not-implemented: "Не реализовано, ждите обновлений, приходите в следующем году!"
   source:
     text: "Исходный код бота открыт — ссылка на репозиторий ниже."
 
@@ -22,14 +21,14 @@ vote:
     title: "Выберите мем, чтобы оценить его:"
     empty: "Пока нет доступных мемов для голосования."
     item:
-      unvoted: "Мемчик №{position}: {description}. Глобальный рейтинг: {globalRating}."
-      voted: "Мемчик №{position}: {description}. Ваша оценка: {rating}. Глобальный рейтинг: {globalRating}."
+      unvoted: "[{globalRating}] Мемчик №{position}: {description}"
+      voted: "[{globalRating}] [вы: {rating}] Мемчик №{position}: {description}"
   detail:
     caption: "{description}"
     already-voted: "{description}\n\nВы уже оценили этот мем: {rating}"
   rate:
     button:
-      z: "Очень смешно! Это теперь мой самый любимый мем!"
+      s: "Очень смешно! Это теперь мой самый любимый мем!"
       a: "Смешно, сохраню себе на память!"
       b: "Смешно!"
       c: "Могло бы быть смешнее..."
@@ -43,10 +42,20 @@ rating:
   list:
     title: "Глобальный рейтинг мемов:"
     empty: "Пока нет доступных мемов."
-    item: "Мемчик №{position}: {description}. Глобальный рейтинг: {globalRating}."
+    item: "[{globalRating}] Мемчик №{position}: {description}"
   detail:
     caption: "{description}\n\nГлобальный рейтинг: {globalRating}"
   none: "нет оценок"
+
+tier:
+  caption:
+    personal: "Ваш тир-лист"
+    global: "Глобальный тир-лист"
+  generating: "Генерирую тир-лист, это займёт пару секунд…"
+  empty: "Пока нет оценённых мемов — тир-лист составить не из чего."
+  rate-limited: "Слишком часто. Попробуйте снова через {seconds} сек."
+  queue-full: "Сервис генерации сейчас перегружен, попробуйте чуть позже."
+  failed: "Не удалось сгенерировать тир-лист, попробуйте позже."
 
 error:
   generic: "Что-то пошло не так, попробуйте ещё раз."
