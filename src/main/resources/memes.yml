@@ -99,7 +99,7 @@ memes:
     code: "minimonolith-vs-micorservice"
     name: "Микро-мем про Микро-севрисы #2"
     path: "memes/shreked.png"
-    description: "*Щелк*\nИщите себя в фотографиях с мероприятия!"
+    description: "*Щелк*\nИщите себя в фотографиях с мероприятия!\n\n(_Oh no, you've been shrecked!_)"
     available-after: 2025-01-01T00:00:00.00+03:00
 
   - position: 15

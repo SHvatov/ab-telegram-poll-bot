@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
 
   poll-bot:
-    image: ghcr.io/shvatov/ab-telegram-poll-bot:sha-6855c3b
+    image: ghcr.io/shvatov/ab-telegram-poll-bot:sha-791fcbe
     platform: linux/x86_64
     env_file:
       - .env
