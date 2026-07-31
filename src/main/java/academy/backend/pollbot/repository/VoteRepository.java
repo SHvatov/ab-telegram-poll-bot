@@ -3,8 +3,11 @@ package academy.backend.pollbot.repository;
 import academy.backend.pollbot.domain.Rating;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.AbstractPipeline;
+import redis.clients.jedis.Response;
 import redis.clients.jedis.UnifiedJedis;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +74,35 @@ public final class VoteRepository {
                 .max(Comparator.<Map.Entry<Rating, Long>>comparingLong(Map.Entry::getValue)
                         .thenComparing(e -> -e.getKey().rank()))
                 .map(Map.Entry::getKey);
+    }
+
+    /**
+     * How many memes each of the given users has voted for (HLEN of their votes hash), in one
+     * pipelined round trip. The returned list lines up positionally with {@code userIds}.
+     */
+    public List<Long> votedMemeCounts(List<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+        List<Response<Long>> responses = new ArrayList<>(userIds.size());
+        try (AbstractPipeline pipeline = redis.pipelined()) {
+            for (long userId : userIds) {
+                responses.add(pipeline.hlen(userVotesKey(userId)));
+            }
+            pipeline.sync();
+        }
+        List<Long> counts = new ArrayList<>(responses.size());
+        for (Response<Long> response : responses) {
+            counts.add(response.get());
+        }
+        return counts;
+    }
+
+    /** Total number of votes (== distinct voters) a meme has received, summed across all ratings. */
+    public long voterCount(String memeCode) {
+        return redis.hgetAll(memeRatingKey(memeCode)).values().stream()
+                .mapToLong(Long::parseLong)
+                .sum();
     }
 
     private static String userVotesKey(long userId) {

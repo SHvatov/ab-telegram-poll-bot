@@ -22,6 +22,8 @@ public final class CallbackProtocol {
     public static final String SOURCE = "n1w";
     public static final String VOTE_LIST_BACK = "c8y";
     public static final String RATING_LIST_BACK = "f3g";
+    public static final String ADMIN_PICK_WINNER = "a1e";
+    public static final String ADMIN_STATS = "a2r";
 
     private static final String OPEN_MEME_FOR_VOTE_PREFIX = "z5r:";
     private static final String OPEN_MEME_FOR_RATING_PREFIX = "k0b:";

@@ -9,6 +9,7 @@ import academy.backend.pollbot.telegram.routing.CallbackProtocol;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class MenuFlow {
@@ -36,7 +37,7 @@ public final class MenuFlow {
     public void showMainMenuWithGreeting(long chatId, long userId) {
         String text = localization.get("welcome.greeting") + "\n\n" + localization.get("menu.title");
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard());
+        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard(userId));
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 
@@ -54,13 +55,13 @@ public final class MenuFlow {
         gateway.deleteMessage(chatId, incomingMessageId);
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
         String text = localization.get("error.unknown-command") + "\n\n" + localization.get("menu.title");
-        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard());
+        int messageId = gateway.renderFreshText(chatId, previous, text, mainMenuKeyboard(userId));
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 
     private void render(long chatId, long userId, String text) {
         CurrentChatState previous = chatViewRepository.getState(chatId).orElse(null);
-        int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard());
+        int messageId = gateway.renderText(chatId, previous, text, mainMenuKeyboard(userId));
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 
@@ -74,14 +75,19 @@ public final class MenuFlow {
         setState(chatId, ChatState.MENU, messageId, userId);
     }
 
-    private InlineKeyboardMarkup mainMenuKeyboard() {
-        return InlineKeyboardMarkup.builder().keyboard(List.of(
+    private InlineKeyboardMarkup mainMenuKeyboard(long userId) {
+        List<InlineKeyboardRow> rows = new ArrayList<>(List.of(
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.vote"), CallbackProtocol.SHOW_VOTE_LIST)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.rating"), CallbackProtocol.SHOW_RATING_LIST)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.my-tier-list"), CallbackProtocol.MY_TIER_LIST)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.global-tier-list"), CallbackProtocol.GLOBAL_TIER_LIST)),
                 new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.source"), CallbackProtocol.SOURCE))
-        )).build();
+        ));
+        if (AdminFlow.isAdmin(userId)) {
+            rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.admin-winner"), CallbackProtocol.ADMIN_PICK_WINNER)));
+            rows.add(new InlineKeyboardRow(Keyboards.button(localization.get("menu.button.admin-stats"), CallbackProtocol.ADMIN_STATS)));
+        }
+        return InlineKeyboardMarkup.builder().keyboard(rows).build();
     }
 
     /** Persists the screen and decides whether it belongs in the scheduler's refresh set. */
