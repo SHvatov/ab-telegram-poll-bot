@@ -122,7 +122,8 @@ public final class AdminFlow {
         long maxVoted = voteCounts.stream().mapToLong(Long::longValue).max().orElse(0);
         sb.append("\n").append(localization.get("admin.stats.histogram-header")).append("\n");
         for (long threshold = 1; threshold <= maxVoted; threshold++) {
-            long atLeast = voteCounts.stream().filter(count -> count >= threshold).count();
+            final var finalThreshold = threshold;
+            long atLeast = voteCounts.stream().filter(count -> count >= finalThreshold).count();
             sb.append(localization.get("admin.stats.histogram-line",
                     Map.of("n", threshold, "count", atLeast))).append("\n");
         }
