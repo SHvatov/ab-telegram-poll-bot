@@ -4,6 +4,7 @@ import academy.backend.pollbot.config.i18n.Localization;
 import academy.backend.pollbot.domain.ChatState;
 import academy.backend.pollbot.domain.MemeDefinition;
 import academy.backend.pollbot.domain.MemeManager;
+import academy.backend.pollbot.domain.Rating;
 import academy.backend.pollbot.redis.CurrentChatState;
 import academy.backend.pollbot.repository.ChatViewRepository;
 import academy.backend.pollbot.repository.VoteRepository;
@@ -57,8 +58,12 @@ public final class RatingFlow {
         }
         MemeDefinition meme = memeOpt.get();
         String globalRatingText = voteRepository.getGlobalRating(meme.code()).map(Enum::name).orElse(localization.get("rating.none"));
-        String caption = localization.get("rating.detail.caption",
-                Map.of("description", meme.description(), "globalRating", globalRatingText));
+        Optional<Rating> userVote = voteRepository.getUserVote(userId, meme.code());
+        String caption = userVote.isPresent()
+                ? localization.get("rating.detail.caption-rated", Map.of(
+                        "description", meme.description(), "globalRating", globalRatingText, "rating", userVote.get().name()))
+                : localization.get("rating.detail.caption", Map.of(
+                        "description", meme.description(), "globalRating", globalRatingText));
         InlineKeyboardMarkup keyboard = Keyboards.singleButtonKeyboard(localization.get("vote.rate.button.back"), CallbackProtocol.RATING_LIST_BACK);
 
         int messageId = gateway.renderPhoto(chatId, previous, meme.path(), caption, keyboard);

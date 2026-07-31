@@ -13,6 +13,8 @@ menu:
     global-tier-list: "🌍 Глобальный тир-лист"
     source: "💻 Исходники"
     back: "◀️ Главное меню"
+    admin-winner: "🎲 Определить победителя"
+    admin-stats: "📈 Статистика использования"
   source:
     text: "💻 Исходный код бота открыт — ссылка на репозиторий ниже. Загляни, там даже переписка с Клодиком есть! 😄"
 
@@ -25,7 +27,7 @@ vote:
       voted: "[{globalRating}] [вы: {rating}] {name}"
   detail:
     caption: "{description}"
-    already-voted: "{description}\n\nВы уже оценили этот мем: {rating}"
+    already-voted: "{description}\n\nВы оценили этот мем: {rating}"
   rate:
     button:
       s: "Очень смешно! Это теперь мой самый любимый мем!"
@@ -45,6 +47,7 @@ rating:
     item: "[{globalRating}] {name}"
   detail:
     caption: "{description}\n\nГлобальный рейтинг: {globalRating}"
+    caption-rated: "{description}\n\nГлобальный рейтинг: {globalRating}\nВаша оценка: {rating}"
   none: "нет оценок"
 
 tier:
@@ -53,9 +56,26 @@ tier:
     global: "🌍 Глобальный тир-лист"
   generating: "⏳ Генерирую тир-лист, это займёт пару секунд…"
   empty: "Пока нет оценённых мемов — тир-лист составить не из чего. 🤷"
-  rate-limited: "⏳ Слишком часто. Попробуйте снова через {seconds} сек."
+  rate-limited: "⏳ Попробуйте снова через {seconds} сек."
   queue-full: "🥵 Сервис генерации сейчас перегружен, попробуйте чуть позже."
   failed: "😔 Не удалось сгенерировать тир-лист, попробуйте позже."
+
+admin:
+  winner:
+    announcement: "🏆 Поздравляем! 🎉\n\nВы стали победителем конкурса «Лучший мем года» на дне рождения Т-Академии! 🎂\n\nЧтобы забрать приз 🎁, напишите Сергею — @skhvatov."
+    picked-alert: "🎉 Победитель выбран и уведомлён (ИД {userId})."
+    empty-alert: "🤷 Некого выбирать — пока никто не проголосовал ни за один мем."
+    notify-failed-alert: "⚠️ Победитель выбран (ИД {userId}), но отправить ему сообщение не удалось."
+  stats:
+    title: "📈 Статистика использования"
+    users: "👥 Пользователей всего: {count}"
+    voters: "🗳 Проголосовали хотя бы раз: {count}"
+    meme-votes-header: "📊 Голосов по мемам:"
+    percentiles-header: "📈 Перцентили (мемов оценено на пользователя):"
+    percentile-line: "  • p{p}: {value} мемов"
+    histogram-header: "🎯 Проголосовали хотя бы за N мемов:"
+    histogram-line: "  • ≥ {n}: {count} польз."
+    empty: "Пока нет данных — никто не голосовал."
 
 error:
   generic: "Что-то пошло не так, попробуйте ещё раз."

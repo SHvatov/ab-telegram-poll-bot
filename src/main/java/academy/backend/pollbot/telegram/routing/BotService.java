@@ -10,6 +10,7 @@ import academy.backend.pollbot.repository.RateLimitRepository;
 import academy.backend.pollbot.repository.UserRepository;
 import academy.backend.pollbot.repository.VoteRepository;
 import academy.backend.pollbot.telegram.api.TelegramGateway;
+import academy.backend.pollbot.telegram.ui.AdminFlow;
 import academy.backend.pollbot.telegram.ui.MenuFlow;
 import academy.backend.pollbot.telegram.ui.RatingFlow;
 import academy.backend.pollbot.telegram.ui.TierListFlow;
@@ -35,9 +36,11 @@ public final class BotService {
     private final VoteFlow voteFlow;
     private final RatingFlow ratingFlow;
     private final TierListFlow tierListFlow;
+    private final AdminFlow adminFlow;
 
     private BotService(TelegramGateway gateway, UserRepository userRepository, Localization localization,
-                        MenuFlow menuFlow, VoteFlow voteFlow, RatingFlow ratingFlow, TierListFlow tierListFlow) {
+                        MenuFlow menuFlow, VoteFlow voteFlow, RatingFlow ratingFlow, TierListFlow tierListFlow,
+                        AdminFlow adminFlow) {
         this.gateway = gateway;
         this.userRepository = userRepository;
         this.localization = localization;
@@ -45,6 +48,7 @@ public final class BotService {
         this.voteFlow = voteFlow;
         this.ratingFlow = ratingFlow;
         this.tierListFlow = tierListFlow;
+        this.adminFlow = adminFlow;
     }
 
     public static BotService create(TelegramClient telegramClient, MemeManager memeManager, Localization localization,
@@ -57,7 +61,8 @@ public final class BotService {
         RatingFlow ratingFlow = new RatingFlow(gateway, localization, memeManager, voteRepository, chatViewRepository);
         TierListFlow tierListFlow = new TierListFlow(gateway, localization, memeManager, voteRepository,
                 chatViewRepository, rateLimitRepository, tierListGenerator, new TierListImageRenderer(), chatSequencer);
-        return new BotService(gateway, userRepository, localization, menuFlow, voteFlow, ratingFlow, tierListFlow);
+        AdminFlow adminFlow = new AdminFlow(gateway, localization, memeManager, userRepository, voteRepository, chatViewRepository);
+        return new BotService(gateway, userRepository, localization, menuFlow, voteFlow, ratingFlow, tierListFlow, adminFlow);
     }
 
     public void handleStart(Message message) {
@@ -119,6 +124,13 @@ public final class BotService {
             voteFlow.showList(chatId, userId);
         } else if (CallbackProtocol.RATING_LIST_BACK.equals(data)) {
             ratingFlow.showList(chatId, userId);
+        } else if (CallbackProtocol.ADMIN_PICK_WINNER.equals(data)) {
+            return AdminFlow.isAdmin(userId) ? adminFlow.pickWinner() : rejectUnknown(chatId, userId, data);
+        } else if (CallbackProtocol.ADMIN_STATS.equals(data)) {
+            if (!AdminFlow.isAdmin(userId)) {
+                return rejectUnknown(chatId, userId, data);
+            }
+            adminFlow.showStats(chatId, userId);
         } else if (voteOpen.isPresent()) {
             voteFlow.openMeme(chatId, userId, voteOpen.get());
         } else if (ratingOpen.isPresent()) {
@@ -126,11 +138,16 @@ public final class BotService {
         } else if (submitVote.isPresent()) {
             return voteFlow.submitVote(chatId, userId, submitVote.get().memeToken(), submitVote.get().rating());
         } else {
-            log.warn("Unrecognized callback data for chat {}: {}", chatId, data);
-            menuFlow.showUnknownCommand(chatId, userId);
-            return localization.get("error.unknown-command");
+            return rejectUnknown(chatId, userId, data);
         }
         return null;
+    }
+
+    /** Unrecognized (or forbidden) callback data: resets to the menu and surfaces an error alert. */
+    private String rejectUnknown(long chatId, long userId, String data) {
+        log.warn("Unrecognized callback data for chat {}: {}", chatId, data);
+        menuFlow.showUnknownCommand(chatId, userId);
+        return localization.get("error.unknown-command");
     }
 
     public void refreshList(CurrentChatState state) {

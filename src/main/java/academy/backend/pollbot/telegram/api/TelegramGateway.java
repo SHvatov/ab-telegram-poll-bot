@@ -84,6 +84,16 @@ public final class TelegramGateway {
         deleteQuietly(chatId, messageId);
     }
 
+    /** Sends a standalone message to a chat without touching that chat's tracked view state. */
+    public void sendNotification(long chatId, String text) {
+        SendMessage method = SendMessage.builder().chatId(chatId).text(text).build();
+        try {
+            telegramClient.execute(method);
+        } catch (TelegramApiException e) {
+            throw new BotOperationException("Failed to notify chat " + chatId, e);
+        }
+    }
+
     public void updatePhotoCaption(long chatId, int messageId, String caption, InlineKeyboardMarkup keyboard) {
         EditMessageCaption method = EditMessageCaption.builder()
                 .chatId(chatId)
